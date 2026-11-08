@@ -18,11 +18,58 @@ export interface GameState {
   goldCollected: number;
   monstersSlain: number;
   lastInputTime: number;
+  debugPanelOpen: boolean;
+  physicsDebug: boolean;
   setAutoPlaying: (status: boolean) => void;
   updateLastInputTime: () => void;
   incrementGold: (amount: number) => void;
   incrementMonstersSlain: () => void;
   descendToNextLevel: () => void;
+  toggleDebugPanel: () => void;
+  togglePhysicsDebug: () => void;
+}
+
+// Dungeon grid coordinates. Cells are zero-indexed from the grid corner.
+export interface GridCell {
+  x: number;
+  z: number;
+}
+
+// A carved rectangular room. Rooms are kept for monster spawning and AI goals.
+export interface DungeonRoom {
+  x: number;
+  z: number;
+  width: number;
+  depth: number;
+  center: GridCell;
+}
+
+// Full-height walls sit on the far edges of the diorama. Low ledges sit
+// everywhere else so the fixed isometric camera can see into corridors.
+export type WallHeight = 'tall' | 'low';
+
+export interface DungeonWallCell extends GridCell {
+  height: WallHeight;
+}
+
+// Merged wall strips used for collision. One strip replaces many per-tile
+// colliders, which keeps the Rapier broad phase cheap.
+export interface DungeonWallRun {
+  x: number;
+  z: number;
+  width: number;
+  depth: number;
+  height: WallHeight;
+}
+
+export interface DungeonLayout {
+  seed: number;
+  size: number;
+  rooms: DungeonRoom[];
+  floorCells: GridCell[];
+  wallCells: DungeonWallCell[];
+  wallRuns: DungeonWallRun[];
+  spawn: Position;
 }
 
 // Miniplex ECS Entity definition
