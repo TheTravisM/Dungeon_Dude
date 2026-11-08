@@ -1,4 +1,5 @@
 import { Canvas } from '@react-three/fiber';
+import Effects from './components/Effects';
 import Floor from './components/scene/Floor';
 import IsometricCamera from './components/scene/IsometricCamera';
 import Lighting from './components/scene/Lighting';
@@ -15,7 +16,7 @@ export default function App() {
     <div className={styles.app}>
       <div className={styles.canvasLayer}>
         <Canvas
-          shadows
+          shadows="percentage"
           dpr={[1, 2]}
           orthographic
           camera={{ position: [20, 20, 20], zoom: 40, near: 0.1, far: 200 }}
@@ -25,6 +26,7 @@ export default function App() {
           <Lighting />
           <Floor />
           <ReferenceBlock />
+          <Effects />
         </Canvas>
       </div>
 
