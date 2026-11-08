@@ -1,0 +1,23 @@
+// Design Tokens for Dungeon Dude
+
+:root {
+  // Color Palette
+  --color-stone-shadow: #1a202c;
+  --color-torch-fire: #dd6b20;
+  --color-blood-red: #e53e3e;
+  --color-ui-panel: rgba(26, 32, 44, 0.85);
+  
+  // Typography
+  --font-pixel: 'Press Start 2P', system-ui, monospace;
+  
+  // View Transition durations
+  --transition-speed: 0.4s;
+}
+
+// Reusable mixins for modern CSS features
+@mixin glass-panel {
+  background: var(--color-ui-panel);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}

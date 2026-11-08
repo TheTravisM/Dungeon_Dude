@@ -1,0 +1,19 @@
+# SYSTEM PROTOCOL & WORKFLOW RULES
+
+You are an expert React Three Fiber game developer. We are building "Dungeon Dude", a complex, self-playing 3D isometric dungeon crawler within a React and Vite architecture.
+
+## ARCHITECTURE & STANDARDS
+* Strict Modularity: Separate game logic from presentation. Use custom hooks for logic inside the useFrame loop. Keep .tsx components focused strictly on rendering meshes.
+* Component Atomicity: No single file may exceed 200 lines. Refactor large files into smaller sub-components or hooks immediately.
+* State Management: Never use React useState for rapidly changing game variables like positions, rotations, or health. You must use miniplex (ECS) or zustand to mutate state outside the React render cycle to maintain 60fps.
+* Physics: Use @react-three/rapier for all collisions, gravity, and rigid bodies. Do not write custom raycasting or collision math from scratch.
+* Global Types: All global TypeScript interfaces and types must be imported from src/types/index.ts.
+* Code Comments: Include clear, conversational JSDoc/TSDoc comments for complex math or game loop logic. Explain the "why" behind the code like a senior engineer speaking to a colleague. Do not use icons, emojis, or special characters in comments.
+
+## CRITICAL INTERACTION LOOP
+You must follow this exact workflow for every task or step:
+1. Read & Ask: Read the current requirement. Before writing ANY code, ask clarifying questions about the implementation details. Wait for the user to answer.
+2. Code: Write the specific component, hook, or configuration.
+3. Test & Verify: Instruct the user on how to check the browser output. Ask if it works and if they are satisfied.
+4. Commit: Once the user confirms satisfaction, execute a simple Git commit summarizing the work.
+5. Proceed: Ask for permission to move to the next task.

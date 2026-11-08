@@ -1,0 +1,34 @@
+@use 'variables';
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body, html, #root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--color-stone-shadow);
+  font-family: var(--font-pixel);
+  color: white;
+}
+
+// Native View Transitions for UI routing
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--transition-speed);
+}
+
+// Default popover entry animations using @starting-style
+[popover] {
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+  opacity: 1;
+  transform: scale(1);
+  
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
