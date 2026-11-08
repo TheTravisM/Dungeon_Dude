@@ -1,6 +1,6 @@
 # Dungeon Dude - AI Handoff
 
-Last updated: 2026-11-07
+Last updated: 2026-11-08
 Maintained by: the current AI coding agent
 Purpose: authoritative context for any model taking over this project.
 
@@ -16,11 +16,10 @@ This document is a living log. Update it at the end of every step, immediately b
 
 ## 1. Current Status
 
-- **Current step:** Step 2 (Post-Processing Pipeline) is implemented, browser-verified, and approved by the user.
-- **Last committed step:** Step 1, commit `239dc7c feat: scaffold app and isometric base scene`.
-- **Step 2 commit status:** Committed together with this handoff document under `feat: add miniature diorama post-processing pipeline`.
-- **Step 3 status:** Authorized by the user. The ECS, Zustand, physics, and plan-amendment decisions were confirmed on 2026-11-07. Implementation begins after the Step 2 commit.
-- **Expected dirty files for the Step 2 commit:** `src/App.tsx`, `src/components/Effects.tsx`, `src/components/effects/Dither.ts`, and this file.
+- **Current step:** Step 3 (ECS Architecture and Physics Setup) is implemented, browser-verified, and approved by the user on 2026-11-08.
+- **Last committed step:** Step 2, commit `c4a6b44 feat: add miniature diorama post-processing pipeline`.
+- **Step 3 commit status:** Committed together with this handoff document under `feat: add ECS foundation and Rapier physics`.
+- **Expected dirty files for the Step 3 commit:** `package.json`, `package-lock.json`, `src/App.tsx`, `src/App.module.scss`, `src/components/scene/Floor.tsx`, `src/vite-env.d.ts`, `src/game/constants.ts`, `src/game/ecs.ts`, `src/game/store.ts`, `src/components/physics/GamePhysics.tsx`, `src/components/physics/FloorCollider.tsx`, `src/components/physics/PhysicsProbe.tsx`, and this file.
 
 ### Step 0 - Foundational architecture
 
@@ -54,6 +53,28 @@ Verification already performed:
 - Headless Chrome screenshot and a cropped/upscaled screenshot confirm the effects render.
 - Browser console contains no shader or WebGL errors. The only remaining warning is `THREE.Clock: deprecated`, emitted by R3F 9 internals.
 
+### Step 3 - ECS foundation and Rapier physics
+
+Implemented and headless-verified; awaiting user approval:
+
+- `src/game/constants.ts` owns `FLOOR_SIZE`, `FLOOR_THICKNESS`, `PHYSICS_TIME_STEP`, and `GRAVITY`. `Floor.tsx` and `FloorCollider.tsx` both read from it, so the visual slab and the collision slab cannot drift.
+- `src/game/ecs.ts` owns the single module-level `World<Entity>` from `miniplex@2.0.0`, plus `heroQuery`, `monsterQuery`, `propQuery`, and `createHero`/`createMonster`/`createProp` factories. No React imports.
+- `src/game/store.ts` implements `GameState` with Zustand 5. `VITE_STARTING_LEVEL` seeds `currentDepth` and falls back to 1.
+- `src/components/physics/GamePhysics.tsx` wraps the scene in `<Physics>` with fixed `1/60` timestep, interpolation, gravity, and the debug flag.
+- `src/components/physics/FloorCollider.tsx` is one fixed cuboid collider matching the visual floor exactly.
+- `src/components/physics/PhysicsProbe.tsx` is the temporary falling box. It must be deleted when Step 4/5 land.
+- The DOM badge reads `currentDepth` from the store and shows "Step 3 - ECS and Physics".
+- `@miniplex/core` and `@miniplex/react` were uninstalled. Root `zustand` is now 5.1.0. `react` and `react-dom` are pinned to `~19.3.1`.
+
+Verification performed:
+- `npx tsc -b --pretty false` passes.
+- `npm run lint` passes.
+- `npm run build` passes (bundle ~3.51 MB, gzip ~1.19 MB, expected because of the Rapier WASM).
+- Headless Chrome at 1200 ms and 2500 ms shows the probe falling and then resting on the floor, with the pink Rapier debug wireframe around the box and the yellow debug outline around the floor collider.
+- The probe is still resting on the floor at 8000 ms. The 4000 ms and 8000 ms captures that included the post-processing pipeline came out blank, but a control run with `EFFECTS_ENABLED = false` rendered correctly at both durations. Console output at 4000 ms contains no app, shader, or WebGL errors, so the blank frames are a headless `EffectComposer`/SwiftShader readback artifact, not an app regression. `EFFECTS_ENABLED` was restored to `true` afterwards.
+- Remaining console noise: `THREE.Clock` deprecation (R3F 9 internals) and the Rapier "using deprecated parameters for the initialization function" warning (from `@react-three/rapier` internals).
+- User browser-verified both conditions on 2026-11-08: probe falls and settles, debug wireframes show only when `VITE_DEBUG_PHYSICS=true`, badge is correct, effects look right with debug off, no console errors.
+
 ---
 
 ## 2. Architectural Decisions
@@ -86,7 +107,7 @@ Reasons:
 - Do not downgrade `three` below 0.168 while `postprocessing` 6.39 is installed.
 - R3F 9's peer range is `react >=19 <19.4`. `package.json` currently has `react: ^19.0.0`, which would allow a future React 19.4 to break the peer range. Pin `react` and `react-dom` to `~19.3.1` before any future `npm install` if the project is not already pinned.
 
-### 2.3 ECS package decision is still open, and the two Miniplex APIs must not be mixed
+### 2.3 ECS package decision: stable `miniplex@2.0.0` only
 
 This is the highest-priority Step 3 decision.
 
@@ -202,6 +223,13 @@ The user approved the following shifts. Log them as active project direction:
 - Add queued, cached audio and TTS playback with an audio unlock on menu entry.
 - The remaining items in section 5 are approved as a prioritized backlog, not mandatory for the current step.
 
+### 2.14 Step 4 tooling additions (approved 2026-11-08)
+
+- Add Drei `<Stats />` (or `<StatsGl />`) behind a debug flag so draw calls and frame time are visible while dungeon complexity grows. Default off; never ship it enabled.
+- Add a lightweight DOM toggle for Rapier physics debug rendering, so colliders can be inspected without restarting Vite with `VITE_DEBUG_PHYSICS`. The env var remains the initial default; the toggle overrides it at runtime.
+- Both controls belong in the temporary development overlay, not the final HUD. Remove or hide them before any release build.
+- Keep debug UI state out of the per-frame game loop. It is a rare UI change and may live in React state or the Zustand store.
+
 ---
 
 ## 3. Environment and Commands
@@ -227,6 +255,7 @@ Known non-blocking warnings:
 - `THREE.Clock: This module has been deprecated` comes from R3F 9 internals.
 - Dart Sass legacy JS API deprecation comes from Vite 5.
 - Vite production build warns that the main JS chunk is over 500 kB. This is expected while Three is bundled; address only if load time becomes a requirement.
+- Rapier logs "using deprecated parameters for the initialization function; pass a single object instead". It originates inside `@react-three/rapier` 2.2.0, not project code. Ignore it; do not patch `node_modules`.
 
 ---
 
@@ -341,31 +370,29 @@ Ordered roughly by impact on the final product.
 
 ## 6. Next Immediate Task
 
-**Step 3: ECS Architecture and Physics Setup.** All decisions are confirmed; no further clarifying questions are required.
+**Finish Step 3, then start Step 4 only after approval.**
 
-Package work:
-1. Remove `@miniplex/core` and `@miniplex/react`: `npm uninstall @miniplex/core @miniplex/react`.
-2. Upgrade Zustand: `npm install zustand@^5.1.0`.
-3. Pin `react` and `react-dom` to `~19.3.1` to protect the R3F 9 peer range, then refresh the lockfile.
-4. Keep `miniplex@2.0.0` as the only ECS package.
+Step 3 is code-complete and headless-verified. The only remaining work is:
 
-Implementation:
-- `src/game/ecs.ts` with a module-level `World<Entity>`, typed entity factories for hero, monster, and prop, and archetype queries. No React imports.
-- `src/game/store.ts` with a Zustand 5 store matching `GameState` from `src/types/index.ts`. UI and aggregate values only.
-- Shared constants for floor size, gravity, and timestep, so visuals and colliders cannot drift apart.
-- A physics wrapper around the scene with `timeStep={1/60}`, interpolation, gravity, and `VITE_DEBUG_PHYSICS` support.
-- A fixed floor collider matching the visual floor.
-- A temporary dynamic probe box above the floor to verify gravity and contact resolution.
-- `VITE_DEBUG_PHYSICS` typing in `src/vite-env.d.ts`.
+1. Ask the user to run `$env:VITE_DEBUG_PHYSICS='true'; npm run dev` and confirm:
+   - The orange probe box falls from above and comes to rest on the floor.
+   - Pink Rapier debug wireframes are visible around the box and the floor slab.
+   - The badge shows "Step 3 - ECS and Physics" and "Depth 1".
+   - No console errors beyond the known deprecation warnings.
+2. If approved, confirm `EFFECTS_ENABLED` is `true`, then commit with `feat: add ECS foundation and Rapier physics`.
+3. Ask permission before starting Step 4.
 
-Verification:
-- `npx tsc -b`
-- `npm run lint`
-- `npm run build`
-- Browser check with physics debug enabled.
-- Update this file, then ask the user to verify before committing with a message such as `feat: add ECS foundation and Rapier physics`.
+**Step 4: Dungeon Generation.** Approved approach:
 
-Do not start Step 4 until the user approves Step 3.
+- Seeded procedural generation with a documented seed source.
+- Instanced floor and wall visuals, not one mesh per tile.
+- One fixed compound/static collider for level geometry, not one rigid body per tile.
+- Precomputed wall cutaways from the fixed isometric camera angle; never raycast occluders every frame.
+- Delete `PhysicsProbe.tsx` and `ReferenceBlock.tsx` when real geometry replaces them.
+- Add the approved diorama plinth / floor edge trim here, since it defines the miniature silhouette.
+- Keep the step browser-verifiable and update this file before committing.
+
+Do not start Step 5 until the user approves Step 4.
 
 ---
 
