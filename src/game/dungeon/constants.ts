@@ -37,7 +37,10 @@ export const DUNGEON_ROOM_SPACING = 1;
 /** Upper bound for rejected random placements before the generator retries. */
 export const DUNGEON_ROOM_MAX_ATTEMPTS = 100;
 
-/** Corridors are one tile wide. */
+/**
+ * Corridors are one tile wide. The Step 5 hero capsule and character-controller
+ * offset must stay within one half tile so the hero can clear every corridor.
+ */
 export const DUNGEON_CORRIDOR_WIDTH = 1;
 
 /** Top of the carved floor tiles. Everything walkable sits at this height. */

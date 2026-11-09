@@ -1,34 +1,27 @@
 import type {
   DungeonLayout,
-  DungeonRoom,
   DungeonWallCell,
   DungeonWallRun,
-  GridCell,
   Position,
   WallHeight,
 } from '../../types';
-import {
-  DUNGEON_SIZE,
-  FLOOR_TOP,
-} from './constants';
+import { DUNGEON_SIZE, FLOOR_TOP } from './constants';
+import { isFullyConnected } from './connectivity';
+import { carveCorridors } from './corridors';
 import { createRandom } from './random';
 import { placeRooms } from './rooms';
-
-const FLOOR = 1;
 
 /**
  * Builds a connected dungeon from a seed. The layout is a plain data object;
  * rendering and collision both consume it, so the generator can be tested
  * without a WebGL context.
  *
- * Strategy: carve a centered starting room, scatter non-overlapping rooms,
- * connect every room to the previous one with an L-shaped two-tile corridor,
- * then derive wall cells from floor adjacency. Because rooms form a chain,
- * every carved space is reachable.
+ * Strategy: place non-overlapping rooms, connect them with one-tile L-shaped
+ * corridors using a deterministic spanning tree, then derive wall cells from
+ * floor adjacency. Every carved floor cell is reachable from the start room.
  */
 export function generateDungeon(seed: number, size = DUNGEON_SIZE): DungeonLayout {
   const rng = createRandom(seed);
-  const grid = new Uint8Array(size * size);
   const placement = placeRooms(rng, size);
 
   if (!placement.ok) {
@@ -36,61 +29,22 @@ export function generateDungeon(seed: number, size = DUNGEON_SIZE): DungeonLayou
   }
 
   const rooms = placement.rooms;
-
+  const { floorCells } = carveCorridors(rooms, rng, size);
   const index = (x: number, z: number) => z * size + x;
+  const floorMask = new Uint8Array(size * size);
 
-  const carve = (x: number, z: number) => {
-    if (x >= 0 && z >= 0 && x < size && z < size) grid[index(x, z)] = FLOOR;
-  };
+  for (const cell of floorCells) floorMask[index(cell.x, cell.z)] = 1;
 
-  const carveRoom = (room: DungeonRoom) => {
-    for (let z = room.z; z < room.z + room.depth; z++) {
-      for (let x = room.x; x < room.x + room.width; x++) carve(x, z);
-    }
-  };
-
-  // Carve the accepted placement into the grid. Corridor and wall derivation
-  // remain separate stages so each can be verified on its own.
-  for (const room of rooms) carveRoom(room);
-
-  const carveHorizontal = (z: number, x1: number, x2: number) => {
-    const start = Math.min(x1, x2);
-    const end = Math.max(x1, x2);
-    for (let x = start; x <= end; x++) {
-      carve(x, z);
-      carve(x, z + 1);
-    }
-  };
-
-  const carveVertical = (x: number, z1: number, z2: number) => {
-    const start = Math.min(z1, z2);
-    const end = Math.max(z1, z2);
-    for (let z = start; z <= end; z++) {
-      carve(x, z);
-      carve(x + 1, z);
-    }
-  };
-
-  for (let i = 1; i < rooms.length; i++) {
-    const from = rooms[i - 1].center;
-    const to = rooms[i].center;
-    if (i % 2 === 1) {
-      carveHorizontal(from.z, from.x, to.x);
-      carveVertical(to.x, from.z, to.z);
-    } else {
-      carveVertical(from.x, from.z, to.z);
-      carveHorizontal(to.z, from.x, to.x);
-    }
+  if (!isFullyConnected(floorCells, size, rooms[0].center)) {
+    throw new Error(`Dungeon floor is disconnected for seed ${seed}`);
   }
 
-  const floorCells: GridCell[] = [];
   const wallCells: DungeonWallCell[] = [];
   const wallHeightAt = new Map<number, WallHeight>();
 
   for (let z = 0; z < size; z++) {
     for (let x = 0; x < size; x++) {
-      if (grid[index(x, z)] === FLOOR) {
-        floorCells.push({ x, z });
+      if (floorMask[index(x, z)] === 1) {
         continue;
       }
 
@@ -105,7 +59,7 @@ export function generateDungeon(seed: number, size = DUNGEON_SIZE): DungeonLayou
             nz >= 0 &&
             nx < size &&
             nz < size &&
-            grid[index(nx, nz)] === FLOOR
+            floorMask[index(nx, nz)] === 1
           ) {
             touchesFloor = true;
             break;
