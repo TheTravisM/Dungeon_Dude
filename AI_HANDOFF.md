@@ -34,6 +34,8 @@ The Step 3 statements above are preserved as history, but the current local chec
 
 Do not redo approved Step 3 work. Repair the two compile failures in micro-step 4.01, then refine the existing generator in 4.02 through 4.05.
 
+Update (2026-11-08, micro-step 4.01): both compile failures are repaired. `FLOOR_THICKNESS` is restored in `src/game/constants.ts`, and `src/game/store.ts` now implements the four debug members. TypeScript, lint, and production build pass.
+
 ### Step 0 - Foundational architecture
 
 Committed as `25a4fbe chore: initial commit with foundational architecture`.
@@ -455,3 +457,4 @@ For the micro-step workflow, `docs/steps/INDEX.md` governs the interaction loop:
 ## 8. Micro-Step Execution Log
 
 - **2026-11-08 — 4.00 Read-only baseline audit and dungeon design proposal:** Audit completed at HEAD `417fe2a` with no source changes. Confirmed `tsc -b` and `build` fail on missing `FLOOR_THICKNESS` and unimplemented `GameState` debug members; lint passes. Confirmed commit `c133a6c` introduced both failures and added an unapproved early dungeon generator. User approved the dungeon design recorded in section 2.15. Next task is 4.01; Step 4 is not complete.
+- **2026-11-08 — 4.01 Repair confirmed Step 3 baseline inconsistencies:** Restored `FLOOR_THICKNESS = 0.5` in `src/game/constants.ts` and implemented the four missing `GameState` debug members in `src/game/store.ts`, with `physicsDebug` initialized from `VITE_DEBUG_PHYSICS` and defaulting false. Protected files untouched. `npx tsc -b --pretty false`, `npm run lint`, and `npm run build` all pass; `git diff --check` clean. UI wiring remains deferred to 4.10. Next task is 4.02.
