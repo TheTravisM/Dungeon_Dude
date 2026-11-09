@@ -8,12 +8,11 @@ import type {
   WallHeight,
 } from '../../types';
 import {
-  DUNGEON_MARGIN,
-  DUNGEON_ROOM_TARGET,
   DUNGEON_SIZE,
   FLOOR_TOP,
 } from './constants';
 import { createRandom } from './random';
+import { placeRooms } from './rooms';
 
 const FLOOR = 1;
 
@@ -30,7 +29,13 @@ const FLOOR = 1;
 export function generateDungeon(seed: number, size = DUNGEON_SIZE): DungeonLayout {
   const rng = createRandom(seed);
   const grid = new Uint8Array(size * size);
-  const rooms: DungeonRoom[] = [];
+  const placement = placeRooms(rng, size);
+
+  if (!placement.ok) {
+    throw new Error(`Dungeon generation failed for seed ${seed}: ${placement.reason}`);
+  }
+
+  const rooms = placement.rooms;
 
   const index = (x: number, z: number) => z * size + x;
 
@@ -44,67 +49,9 @@ export function generateDungeon(seed: number, size = DUNGEON_SIZE): DungeonLayou
     }
   };
 
-  const placeRoom = (x: number, z: number, width: number, depth: number) => {
-    if (
-      x < DUNGEON_MARGIN ||
-      z < DUNGEON_MARGIN ||
-      x + width > size - DUNGEON_MARGIN ||
-      z + depth > size - DUNGEON_MARGIN
-    ) {
-      return null;
-    }
-
-    // Keep one empty tile between rooms so their walls do not merge into
-    // unreadable blocks.
-    for (const room of rooms) {
-      if (
-        x < room.x + room.width + 1 &&
-        x + width + 1 > room.x &&
-        z < room.z + room.depth + 1 &&
-        z + depth + 1 > room.z
-      ) {
-        return null;
-      }
-    }
-
-    const room: DungeonRoom = {
-      x,
-      z,
-      width,
-      depth,
-      center: { x: x + (width >> 1), z: z + (depth >> 1) },
-    };
-
-    rooms.push(room);
-    carveRoom(room);
-    return room;
-  };
-
-  // The first room contains the grid center so the hero and the physics probe
-  // always spawn over solid floor.
-  const firstWidth = 5 + rng.int(0, 2);
-  const firstDepth = 5 + rng.int(0, 2);
-  placeRoom(
-    Math.floor((size - firstWidth) / 2),
-    Math.floor((size - firstDepth) / 2),
-    firstWidth,
-    firstDepth
-  );
-
-  let attempts = 0;
-  while (rooms.length < DUNGEON_ROOM_TARGET && attempts < 80) {
-    attempts++;
-    const width = 3 + rng.int(0, 2);
-    const depth = 3 + rng.int(0, 2);
-    const maxX = size - DUNGEON_MARGIN - width;
-    const maxZ = size - DUNGEON_MARGIN - depth;
-    placeRoom(
-      DUNGEON_MARGIN + rng.int(0, maxX - DUNGEON_MARGIN),
-      DUNGEON_MARGIN + rng.int(0, maxZ - DUNGEON_MARGIN),
-      width,
-      depth
-    );
-  }
+  // Carve the accepted placement into the grid. Corridor and wall derivation
+  // remain separate stages so each can be verified on its own.
+  for (const room of rooms) carveRoom(room);
 
   const carveHorizontal = (z: number, x1: number, x2: number) => {
     const start = Math.min(x1, x2);

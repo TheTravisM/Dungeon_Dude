@@ -170,7 +170,7 @@ Do not start feature implementation until the baseline check is understood and a
 | [x] | 4.00 | Read-only baseline audit and dungeon design proposal |
 | [x] | 4.01 | Repair confirmed Step 3 baseline inconsistencies |
 | [x] | 4.02 | Dungeon configuration, deterministic seed, and PRNG |
-| [ ] | 4.03 | Bounded, non-overlapping room placement |
+| [x] | 4.03 | Bounded, non-overlapping room placement |
 | [ ] | 4.04 | Corridor carving and guaranteed connectivity |
 | [ ] | 4.05 | Perimeter walls, camera cutaways, and merged wall runs |
 | [ ] | 4.06 | Instanced floor rendering |
