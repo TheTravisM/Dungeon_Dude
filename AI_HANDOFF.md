@@ -21,6 +21,19 @@ This document is a living log. Update it at the end of every step, immediately b
 - **Step 3 commit status:** Committed together with this handoff document under `feat: add ECS foundation and Rapier physics`.
 - **Expected dirty files for the Step 3 commit:** `package.json`, `package-lock.json`, `src/App.tsx`, `src/App.module.scss`, `src/components/scene/Floor.tsx`, `src/vite-env.d.ts`, `src/game/constants.ts`, `src/game/ecs.ts`, `src/game/store.ts`, `src/components/physics/GamePhysics.tsx`, `src/components/physics/FloorCollider.tsx`, `src/components/physics/PhysicsProbe.tsx`, and this file.
 
+#### Baseline correction (2026-11-08, micro-step 4.00)
+
+The Step 3 statements above are preserved as history, but the current local checkout does not match them. A read-only audit at HEAD `417fe2a` found:
+
+- `npx tsc -b --pretty false` and `npm run build` fail with exit code 1. `npm run lint` passes.
+- `FLOOR_THICKNESS` is imported by `Floor.tsx` and `FloorCollider.tsx` but is no longer exported by `src/game/constants.ts`.
+- `GameState` requires `debugPanelOpen`, `physicsDebug`, `toggleDebugPanel`, and `togglePhysicsDebug`, but `src/game/store.ts` does not implement them.
+- Commit `c133a6c` caused both failures: it deleted `FLOOR_THICKNESS` and added the four required `GameState` members without updating the store. It also added an unapproved early dungeon generator under `src/game/dungeon/`.
+- The dungeon generator is not composed into `App.tsx`; it has no renderer, collider, or plinth. Its corridors are two tiles wide, it always produces exactly four rooms, and its tall walls are incidental rather than a guaranteed far-edge backdrop.
+- `INDEX.md` says `.cursorrules` contains architecture rules only, but the actual `.cursorrules` also contains the older five-stage interaction loop. The prompt-pack rules in `INDEX.md` govern the micro-step workflow; this factual conflict is recorded rather than silently resolved.
+
+Do not redo approved Step 3 work. Repair the two compile failures in micro-step 4.01, then refine the existing generator in 4.02 through 4.05.
+
 ### Step 0 - Foundational architecture
 
 Committed as `25a4fbe chore: initial commit with foundational architecture`.
@@ -230,6 +243,24 @@ The user approved the following shifts. Log them as active project direction:
 - Both controls belong in the temporary development overlay, not the final HUD. Remove or hide them before any release build.
 - Keep debug UI state out of the per-frame game loop. It is a rare UI change and may live in React state or the Zustand store.
 
+### 2.15 Approved Step 4 dungeon design (2026-11-08, micro-step 4.00)
+
+The user approved the following design after the read-only audit. These are implementation requirements unless the user approves a later amendment.
+
+- **Seed:** depth 1 defaults to `1337`. Depth 2 and later use `seedForDepth(depth)` so floors vary. `VITE_DUNGEON_SEED` overrides both. Layouts stay cached by resolved seed.
+- **Rooms:** target 5 rooms, minimum 4, maximum 6. The start room is 5 to 7 tiles per side and centered. Other rooms are 3 to 5 tiles per side. Keep one empty tile between rooms. Bounded placement rejects out-of-bounds and overlapping rooms; retry with smaller dimensions if fewer than 4 rooms fit. `rooms[0]` is the designated start room.
+- **Corridors:** carve one-tile-wide L-shaped corridors, alternating horizontal-first and vertical-first. Connect each new room to the nearest already-connected room, producing a spanning tree. Add at most one optional loop between non-adjacent rooms. Guarantee connectivity by construction and verify it with a development-only flood fill.
+- **Spawn:** `rooms[0].center`, converted with `worldX = cell.x - (size - 1) / 2`, `worldZ = cell.z - (size - 1) / 2`, `worldY = FLOOR_TOP`. The even-sized grid leaves a 0.5-unit origin offset, which is acceptable.
+- **Perimeter and cutaway:** create a closed outer ring. `tall` walls are the far edges `x === 0 || z === 0`; `low` walls are the near edges `x === 19 || z === 19` and all interior walls. Use 4-neighbour adjacency for interior wall derivation. Decide heights once during generation; never raycast occluders per frame. Keep colliders at full height even where visuals are low.
+- **Wall merging:** greedy 2D rectangles instead of horizontal-only strips. Use merged runs for collision. Use per-tile instancing for wall visuals so tile scale stays consistent.
+- **Floor visuals:** one instanced mesh with a shared `1 x FLOOR_TILE_HEIGHT x 1` box, inset by `FLOOR_TILE_INSET`. One matrix per floor cell, built once per seed and cached outside React.
+- **Wall visuals:** two instanced meshes, one for tall walls and one for low walls, using fixed-height box geometries.
+- **Collision:** one fixed `RigidBody` with `colliders={false}` containing merged floor rectangles with their top at `FLOOR_TOP`, merged wall runs, and one plinth cuboid. This is one body with roughly 20 to 60 cuboid colliders.
+- **Plinth:** `20.8 x 0.8 x 20.8`, top at `y = 0`, bottom at `-0.8`, dark stone material, with a contrasting 0.12 to 0.15 unit top-edge trim. Floor tiles sit above it with their top at `FLOOR_TOP = 0.06`.
+- **Module layout:** reuse `src/game/dungeon/random.ts` and `constants.ts`; split placement, corridors, walls, and visual/collider derivation into focused modules. Compose from `src/components/dungeon/` components. No new dependencies.
+- **Validation:** add a pure `validateLayout(layout)` check for bounds, non-overlap, spawn-on-floor, determinism, and connectivity. Do not add Vitest without approval.
+- **Baseline repair:** micro-step 4.01 must restore `FLOOR_THICKNESS` in `src/game/constants.ts` and implement the four missing debug members in `src/game/store.ts`. Do not edit protected `src/types/index.ts`.
+
 ---
 
 ## 3. Environment and Commands
@@ -394,6 +425,12 @@ Step 3 is code-complete and headless-verified. The only remaining work is:
 
 Do not start Step 5 until the user approves Step 4.
 
+#### Correction (2026-11-08, micro-step 4.00)
+
+The instruction above to finish Step 3 first is stale. Step 3 was approved on 2026-11-08, but commit `c133a6c` later broke the baseline by removing `FLOOR_THICKNESS` and adding unimplemented `GameState` debug members. Do not redo Step 3 and do not ask for the old Step 3 browser verification again.
+
+The next immediate task is micro-step 4.01: repair those two compile failures. Then continue with 4.02 through 4.12 using the approved design recorded in section 2.15. The committed `src/game/dungeon/` generator is an input to 4.02 through 4.05, not approved final behavior.
+
 ---
 
 ## 7. Handoff Protocol
@@ -408,3 +445,13 @@ Follow the critical interaction loop from `.cursorrules` for every task:
 6. Ask permission before starting the next step.
 
 Keep this document accurate. If a decision changes, append a dated entry to section 2 rather than deleting the old reasoning. The next model should be able to continue from this file without reading the entire chat history.
+
+#### Correction (2026-11-08, micro-step 4.00)
+
+For the micro-step workflow, `docs/steps/INDEX.md` governs the interaction loop: ask only when a decision genuinely blocks safe implementation, and wait for explicit approval after each micro-step. The older five-stage loop above still describes commit and handoff mechanics, but its ask-before-every-coding-task rule is superseded by the prompt pack. Preserve this historical text.
+
+---
+
+## 8. Micro-Step Execution Log
+
+- **2026-11-08 — 4.00 Read-only baseline audit and dungeon design proposal:** Audit completed at HEAD `417fe2a` with no source changes. Confirmed `tsc -b` and `build` fail on missing `FLOOR_THICKNESS` and unimplemented `GameState` debug members; lint passes. Confirmed commit `c133a6c` introduced both failures and added an unapproved early dungeon generator. User approved the dungeon design recorded in section 2.15. Next task is 4.01; Step 4 is not complete.

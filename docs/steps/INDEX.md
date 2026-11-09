@@ -167,7 +167,7 @@ Do not start feature implementation until the baseline check is understood and a
 
 | Status | Micro-step | Task |
 |---|---|---|
-| [ ] | 4.00 | Read-only baseline audit and dungeon design proposal |
+| [x] | 4.00 | Read-only baseline audit and dungeon design proposal |
 | [ ] | 4.01 | Repair confirmed Step 3 baseline inconsistencies |
 | [ ] | 4.02 | Dungeon configuration, deterministic seed, and PRNG |
 | [ ] | 4.03 | Bounded, non-overlapping room placement |
