@@ -18,8 +18,7 @@ export const DUNGEON_MARGIN = 1;
 /** Depth one uses this seed so the first floor is reproducible by name. */
 export const DUNGEON_DEFAULT_SEED = 1337;
 
-/** Target, minimum, and maximum room counts approved for the 20 by 20 grid. */
-export const DUNGEON_ROOM_TARGET = 5;
+/** Per-seed room target range. The minimum fallback still applies. */
 export const DUNGEON_ROOM_MIN = 4;
 export const DUNGEON_ROOM_MAX = 6;
 
@@ -55,7 +54,7 @@ export const FLOOR_TILE_INSET = 0.03;
 export const WALL_THICKNESS = DUNGEON_TILE_SIZE;
 
 export const WALL_HEIGHT_TALL = 2.2;
-export const WALL_HEIGHT_LOW = 0.75;
+export const WALL_HEIGHT_LOW = 0.6;
 
 /** Height of the solid stone block the diorama sits on. */
 export const PLINTH_HEIGHT = 0.8;

@@ -1,12 +1,12 @@
 import type { DungeonRoom } from '../../types';
 import {
   DUNGEON_MARGIN,
+  DUNGEON_ROOM_MAX,
   DUNGEON_ROOM_MAX_ATTEMPTS,
   DUNGEON_ROOM_MAX_SIZE,
   DUNGEON_ROOM_MIN,
   DUNGEON_ROOM_MIN_SIZE,
   DUNGEON_ROOM_SPACING,
-  DUNGEON_ROOM_TARGET,
   DUNGEON_SIZE,
   DUNGEON_START_ROOM_MAX,
   DUNGEON_START_ROOM_MIN,
@@ -69,6 +69,9 @@ export function placeRooms(
   size: number = DUNGEON_SIZE
 ): RoomPlacementResult {
   const rooms: DungeonRoom[] = [];
+  // Vary the target per seed within the approved range so the maximum is
+  // exercised while the minimum fallback still protects small layouts.
+  const target = rng.int(DUNGEON_ROOM_MIN, DUNGEON_ROOM_MAX);
 
   const startWidth = rng.int(DUNGEON_START_ROOM_MIN, DUNGEON_START_ROOM_MAX);
   const startDepth = rng.int(DUNGEON_START_ROOM_MIN, DUNGEON_START_ROOM_MAX);
@@ -90,7 +93,7 @@ export function placeRooms(
   rooms.push(startRoom);
 
   let attempts = 0;
-  while (rooms.length < DUNGEON_ROOM_TARGET && attempts < DUNGEON_ROOM_MAX_ATTEMPTS) {
+  while (rooms.length < target && attempts < DUNGEON_ROOM_MAX_ATTEMPTS) {
     attempts += 1;
 
     const width = rng.int(DUNGEON_ROOM_MIN_SIZE, DUNGEON_ROOM_MAX_SIZE);
