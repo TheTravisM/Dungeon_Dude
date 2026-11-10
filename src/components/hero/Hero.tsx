@@ -1,10 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody, type RapierRigidBody } from '@react-three/rapier';
 import { damp, damp3, dampAngle } from 'maath/easing';
 import * as THREE from 'three';
 import type { Vector3Tuple } from 'three';
+import { createHeroTree } from '../../game/ai/HeroTree';
 import { createHero, world } from '../../game/ecs';
+import { getDungeonLayout } from '../../game/dungeon/getDungeonLayout';
+import { buildNavGraph } from '../../game/pathfinding';
+import { useGameStore } from '../../game/store';
 import { usePlayerInput } from '../../hooks/usePlayerInput';
 import type { Entity } from '../../types';
 import TorchLight, { TorchFlame } from './TorchLight';
@@ -54,6 +58,17 @@ export default function Hero({ position }: HeroProps) {
   const entityRef = useRef<Entity | null>(null);
   const { sample } = usePlayerInput();
 
+  // Auto-pilot: the layout is cached per seed, so deriving it here is free.
+  // The tree and its blackboard are created once per layout; a depth change
+  // rebuilds both.
+  const currentDepth = useGameStore((state) => state.currentDepth);
+  const layout = useMemo(() => getDungeonLayout(currentDepth), [currentDepth]);
+  const navGraph = useMemo(() => buildNavGraph(layout), [layout]);
+  const ai = useMemo(
+    () => createHeroTree(navGraph, layout.floorCells),
+    [navGraph, layout.floorCells]
+  );
+
   // Register the hero in the ECS world for the lifetime of the component.
   useEffect(() => {
     const entity = createHero(
@@ -76,9 +91,21 @@ export default function Hero({ position }: HeroProps) {
     const input = sample();
     const pos = body.translation();
 
-    // 1. Move the kinematic body along the input direction.
-    if (input.isMoving) {
-      const move = scratchMove.copy(input.direction).multiplyScalar(SPEED * delta);
+    // 1. Resolve the effective movement direction. sample() runs first so a
+    //    key press flips the mode back to manual before it is read here.
+    let moveDir: THREE.Vector3 | null = null;
+    if (useGameStore.getState().isAutoMode) {
+      ai.blackboard.position.copy(pos);
+      ai.tree.step();
+      if (ai.blackboard.outputDirection.lengthSq() > 0) {
+        moveDir = ai.blackboard.outputDirection;
+      }
+    } else if (input.isMoving) {
+      moveDir = input.direction;
+    }
+
+    if (moveDir) {
+      const move = scratchMove.copy(moveDir).multiplyScalar(SPEED * delta);
       body.setNextKinematicTranslation({
         x: pos.x + move.x,
         y: pos.y,
@@ -87,8 +114,8 @@ export default function Hero({ position }: HeroProps) {
     }
 
     // 2. Face the movement direction (shortest path), hold it when idle.
-    const targetHeading = input.isMoving
-      ? Math.atan2(-input.direction.x, -input.direction.z)
+    const targetHeading = moveDir
+      ? Math.atan2(-moveDir.x, -moveDir.z)
       : headingRef.current.y;
     dampAngle(headingRef.current, 'y', targetHeading, 0.15, delta);
     if (visualRef.current) visualRef.current.rotation.y = headingRef.current.y;
@@ -96,7 +123,7 @@ export default function Hero({ position }: HeroProps) {
 
     // 3. Walk cycle: bob the visual group only, never the torch light.
     if (visualRef.current) {
-      const bobTarget = input.isMoving
+      const bobTarget = moveDir
         ? Math.sin(state.clock.elapsedTime * WALK_FREQUENCY) * WALK_AMPLITUDE
         : 0;
       damp(visualRef.current.position, 'y', bobTarget, 0.1, delta);
@@ -120,9 +147,9 @@ export default function Hero({ position }: HeroProps) {
     if (entity) {
       if (entity.position) entity.position.set(pos.x, pos.y, pos.z);
       if (entity.velocity) {
-        entity.velocity[0] = input.isMoving ? input.direction.x * SPEED : 0;
+        entity.velocity[0] = moveDir ? moveDir.x * SPEED : 0;
         entity.velocity[1] = 0;
-        entity.velocity[2] = input.isMoving ? input.direction.z * SPEED : 0;
+        entity.velocity[2] = moveDir ? moveDir.z * SPEED : 0;
       }
       entity.heading = headingRef.current.y;
     }

@@ -12,8 +12,9 @@ const BASE_INTENSITY = 70;
  * then follows the torch anchor in the scene graph, which keeps the spotlight
  * aimed forward as the hero turns.
  *
- * The spotlight deliberately lives outside the walk-cycle group, so its beam
- * stays stable while the visual model bobs.
+ * The spotlight deliberately lives outside the walk-cycle group, so it does
+ * not inherit the model's bob. A gentle 8 rad/s sway on the light position
+ * keeps the torch feeling alive.
  */
 export function useTorchFlicker() {
   const lightRef = useRef<SpotLight>(null);
@@ -33,7 +34,13 @@ export function useTorchFlicker() {
     const flicker =
       0.9 + Math.sin(time * 11.3) * 0.06 + Math.sin(time * 27.7) * 0.04;
 
-    if (lightRef.current) lightRef.current.intensity = BASE_INTENSITY * flicker;
+    const light = lightRef.current;
+    if (light) {
+      light.intensity = BASE_INTENSITY * flicker;
+      // Subtle torch sway: the beam gently bobs as the hero walks. The base
+      // position is the torch anchor, so this oscillates around it.
+      light.position.y = Math.sin(time * 8) * 0.05;
+    }
   });
 
   return { lightRef, targetRef };
