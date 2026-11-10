@@ -185,7 +185,9 @@ Do not start feature implementation until the baseline check is understood and a
 
 | Status | Micro-step | Task |
 |---|---|---|
+| [x] | 5.00 | 05-00-preflight |
 | [x] | 5.01 | Hero visual model |
+| [ ] | 5.02 | Auto-Idle State & Pathfinding Graph |
 | [ ] | 5.02 | Torch visuals and efficient lighting |
 | [ ] | 5.03 | Hero Miniplex lifecycle registration |
 | [ ] | 5.04 | Kinematic body and capsule collider |

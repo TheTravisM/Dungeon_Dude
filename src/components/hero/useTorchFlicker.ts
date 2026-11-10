@@ -6,15 +6,17 @@ import type { Group, Object3D, SpotLight } from 'three';
 const BASE_INTENSITY = 70;
 
 /**
- * Drives the handheld torch without allocating per frame. Two fixed-frequency
+ * Drives the torch spotlight without allocating per frame. Two fixed-frequency
  * sine waves stand in for flame turbulence, so the motion is deterministic and
  * a given session always looks the same. The light target is assigned once and
- * then follows the hero hierarchy, which keeps the spotlight aimed forward as
- * the hero turns in later steps.
+ * then follows the torch anchor in the scene graph, which keeps the spotlight
+ * aimed forward as the hero turns.
+ *
+ * The spotlight deliberately lives outside the walk-cycle group, so its beam
+ * stays stable while the visual model bobs.
  */
 export function useTorchFlicker() {
   const lightRef = useRef<SpotLight>(null);
-  const flameRef = useRef<Group>(null);
   const targetRef = useRef<Object3D>(null);
 
   useEffect(() => {
@@ -30,15 +32,31 @@ export function useTorchFlicker() {
     const time = clock.getElapsedTime();
     const flicker =
       0.9 + Math.sin(time * 11.3) * 0.06 + Math.sin(time * 27.7) * 0.04;
+
+    if (lightRef.current) lightRef.current.intensity = BASE_INTENSITY * flicker;
+  });
+
+  return { lightRef, targetRef };
+}
+
+/**
+ * Drives the flame meshes in the hero's hand. The flame is visual only and
+ * lives inside the walk-cycle group, so it bobs with the hand while the
+ * spotlight it mimics stays put.
+ */
+export function useFlameFlicker() {
+  const flameRef = useRef<Group>(null);
+
+  useFrame(({ clock }) => {
+    const time = clock.getElapsedTime();
     const flameScale =
       0.95 + Math.sin(time * 17.1) * 0.05 + Math.sin(time * 33.3) * 0.03;
 
-    if (lightRef.current) lightRef.current.intensity = BASE_INTENSITY * flicker;
     if (flameRef.current) {
       flameRef.current.scale.setScalar(flameScale);
       flameRef.current.position.y = Math.sin(time * 9.7) * 0.012;
     }
   });
 
-  return { lightRef, flameRef, targetRef };
+  return { flameRef };
 }

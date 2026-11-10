@@ -1,0 +1,97 @@
+import { useCallback, useRef } from 'react';
+import { useKeyboardControls } from '@react-three/drei';
+import * as THREE from 'three';
+
+/**
+ * Unified player input: keyboard (via Drei's useKeyboardControls) plus the
+ * first connected gamepad. The result is a normalized direction on the XZ
+ * plane so the hero controller can treat both sources identically.
+ *
+ * The hook must be called at the top level of a component rendered inside the
+ * <KeyboardControls> provider; it is not safe to call inside useFrame. The
+ * returned fields are fresh as of the last render; call sample() once per
+ * frame (e.g. in useFrame) so gamepad sticks are read continuously.
+ */
+
+/** Minimum stick deflection before a gamepad axis counts as input. */
+const GAMEPAD_DEADZONE = 0.2;
+
+function applyDeadzone(value: number): number {
+  return Math.abs(value) < GAMEPAD_DEADZONE ? 0 : value;
+}
+
+interface PlayerInputState {
+  /** Normalized movement direction on the XZ plane (y is always 0). */
+  direction: THREE.Vector3;
+  /** True while any key or stick is pushing the hero. */
+  isMoving: boolean;
+  /** True while the player is actively driving (any key/stick active). */
+  isManual: boolean;
+}
+
+export interface PlayerInput extends PlayerInputState {
+  /**
+   * Re-reads keyboard and gamepad, updating the shared state in place.
+   * Returns the same state object, so callers can keep reading the fields.
+   */
+  sample(): PlayerInputState;
+}
+
+export function usePlayerInput(): PlayerInput {
+  // Index 1 is the non-reactive getter; per-frame reads must not re-render.
+  const [, get] = useKeyboardControls();
+
+  const stateRef = useRef<PlayerInputState | null>(null);
+  if (stateRef.current === null) {
+    stateRef.current = {
+      direction: new THREE.Vector3(),
+      isMoving: false,
+      isManual: false,
+    };
+  }
+  const state = stateRef.current;
+
+  const sample = useCallback((): PlayerInputState => {
+    const keys = get();
+
+    let x = 0;
+    let z = 0;
+    if (keys.forward) z -= 1;
+    if (keys.backward) z += 1;
+    if (keys.left) x -= 1;
+    if (keys.right) x += 1;
+
+    // First non-null gamepad: axes[0] = left stick X, axes[1] = left stick Y.
+    let padX = 0;
+    let padY = 0;
+    if (typeof navigator !== 'undefined' && navigator.getGamepads) {
+      for (const pad of navigator.getGamepads()) {
+        if (!pad) continue;
+        padX = applyDeadzone(pad.axes[0] ?? 0);
+        padY = applyDeadzone(pad.axes[1] ?? 0);
+        break;
+      }
+    }
+
+    // Stick "up" (negative Y) maps to world -Z (forward).
+    let dirX = x + padX;
+    let dirZ = z - padY;
+    const length = Math.hypot(dirX, dirZ);
+    if (length > 1) {
+      dirX /= length;
+      dirZ /= length;
+    }
+
+    state.direction.set(dirX, 0, dirZ);
+    state.isMoving = length > 0;
+    state.isManual = length > 0;
+    return state;
+  }, [get]);
+
+  return {
+    direction: state.direction,
+    isMoving: state.isMoving,
+    isManual: state.isManual,
+    sample,
+  };
+}
