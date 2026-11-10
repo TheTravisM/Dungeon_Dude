@@ -16,11 +16,11 @@ export default function TorchLight() {
     <>
       <spotLight
         ref={lightRef}
-        color="#ff9a4d"
+        color="#ffb74d"
         intensity={70}
         distance={9}
-        angle={Math.PI / 4}
-        penumbra={0.65}
+        angle={0.6}
+        penumbra={0.5}
         decay={2}
         castShadow
         shadow-mapSize-width={512}

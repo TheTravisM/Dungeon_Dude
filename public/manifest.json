@@ -1,0 +1,18 @@
+{
+  "name": "Dungeon Dude",
+  "short_name": "Dungeon Dude",
+  "description": "An isometric dungeon crawler game built with React",
+  "start_url": "/",
+  "display": "fullscreen",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "orientation": "landscape-primary",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

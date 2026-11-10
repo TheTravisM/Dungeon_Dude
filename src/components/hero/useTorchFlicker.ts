@@ -31,12 +31,16 @@ export function useTorchFlicker() {
 
   useFrame(({ clock }) => {
     const time = clock.getElapsedTime();
-    const flicker =
-      0.9 + Math.sin(time * 11.3) * 0.06 + Math.sin(time * 27.7) * 0.04;
+    // Multi-frequency flicker (05-07-01): prime multipliers 17 and 23 keep
+    // the composite wave from visibly repeating. The contract's reference
+    // `2.0 + flicker` is written in legacy light units; this project renders
+    // in physical units, so the same wave is scaled onto the physical base
+    // intensity (identical relative depth: base +/- 15%).
+    const flicker = Math.sin(time * 17) * 0.15 + Math.cos(time * 23) * 0.15;
 
     const light = lightRef.current;
     if (light) {
-      light.intensity = BASE_INTENSITY * flicker;
+      light.intensity = BASE_INTENSITY * (1 + flicker / 2);
       // Subtle torch sway: the beam gently bobs as the hero walks. The base
       // position is the torch anchor, so this oscillates around it.
       light.position.y = Math.sin(time * 8) * 0.05;

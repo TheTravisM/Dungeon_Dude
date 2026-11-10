@@ -46,6 +46,11 @@ const INITIAL_HEADING = -Math.PI * 0.75;
  * the offset length only affects depth, never the zoom.
  */
 const CAMERA_OFFSET: [number, number, number] = [10, 10, 10];
+/**
+ * Cinematic look-ahead (05-07-01): how far in front of the hero the camera
+ * target leads along the current movement direction, in world units.
+ */
+const LOOK_AHEAD_FACTOR = 2.5;
 /** Torch anchor: the flame in the right hand, in body-local space. */
 const TORCH_ANCHOR: [number, number, number] = [0.38, 1.05, -0.02];
 
@@ -70,23 +75,29 @@ export default function Hero({ position }: HeroProps) {
   const entityRef = useRef<Entity | null>(null);
   const { sample } = usePlayerInput();
 
-  // Kinematic character controller: created once per physics world so it
-  // persists across frames. The offset is a small stability gap, and
+  // Kinematic character controller: the offset is a small stability gap, and
   // autostep stays disabled so the hero cannot climb the diorama walls.
   // (Renamed from the contract's `world` to avoid the ECS `world` import.)
   const { world: physicsWorld } = useRapier();
-  const characterController = useMemo(() => {
+  // The character controller is a WASM handle that must be created on mount
+  // and freed on cleanup. Keeping its whole lifecycle in an effect (rather
+  // than a useMemo) makes it StrictMode-safe: the simulated unmount frees the
+  // handle and the re-mount recreates it, so the frame loop always holds a
+  // live controller instead of a freed one.
+  const characterControllerRef = useRef<
+    ReturnType<typeof physicsWorld.createCharacterController> | null
+  >(null);
+  useEffect(() => {
     const cc = physicsWorld.createCharacterController(
       CHARACTER_CONTROLLER_OFFSET
     );
     cc.disableAutostep();
-    return cc;
+    characterControllerRef.current = cc;
+    return () => {
+      physicsWorld.removeCharacterController(cc);
+      characterControllerRef.current = null;
+    };
   }, [physicsWorld]);
-
-  // Release the WASM handle when the world or this component goes away.
-  useEffect(() => {
-    return () => physicsWorld.removeCharacterController(characterController);
-  }, [physicsWorld, characterController]);
 
   // Auto-pilot: the layout is cached per seed, so deriving it here is free.
   // The tree and its blackboard are created once per layout; a depth change
@@ -137,11 +148,12 @@ export default function Hero({ position }: HeroProps) {
     if (moveDir) {
       const move = scratchMove.copy(moveDir).multiplyScalar(SPEED * delta);
       const collider = body.collider(0);
-      if (collider) {
+      const cc = characterControllerRef.current;
+      if (collider && cc) {
         // Compute safe movement: the character controller slides the hero
         // along walls instead of clipping through them.
-        characterController.computeColliderMovement(collider, move);
-        const corrected = characterController.computedMovement();
+        cc.computeColliderMovement(collider, move);
+        const corrected = cc.computedMovement();
         body.setNextKinematicTranslation({
           x: pos.x + corrected.x,
           y: pos.y + corrected.y,
@@ -183,13 +195,19 @@ export default function Hero({ position }: HeroProps) {
       }
     }
 
-    // 4. Camera follow, preserving the isometric angle.
+    // 4. Cinematic camera follow with velocity look-ahead (05-07-01): the
+    //    target is the isometric offset plus a push in the movement
+    //    direction, so the view leads the hero while it walks and settles
+    //    back behind it when it stops. The array target keeps damp3
+    //    allocation-free.
+    const lookAheadX = moveDir ? moveDir.x * LOOK_AHEAD_FACTOR : 0;
+    const lookAheadZ = moveDir ? moveDir.z * LOOK_AHEAD_FACTOR : 0;
     damp3(
       state.camera.position,
       [
-        pos.x + CAMERA_OFFSET[0],
+        pos.x + CAMERA_OFFSET[0] + lookAheadX,
         pos.y + CAMERA_OFFSET[1],
-        pos.z + CAMERA_OFFSET[2],
+        pos.z + CAMERA_OFFSET[2] + lookAheadZ,
       ],
       0.2,
       delta
