@@ -21,6 +21,15 @@ This document is a living log. Update it at the end of every step, immediately b
 - **Step 3 commit status:** Committed together with this handoff document under `feat: add ECS foundation and Rapier physics`.
 - **Expected dirty files for the Step 3 commit:** `package.json`, `package-lock.json`, `src/App.tsx`, `src/App.module.scss`, `src/components/scene/Floor.tsx`, `src/vite-env.d.ts`, `src/game/constants.ts`, `src/game/ecs.ts`, `src/game/store.ts`, `src/components/physics/GamePhysics.tsx`, `src/components/physics/FloorCollider.tsx`, `src/components/physics/PhysicsProbe.tsx`, and this file.
 
+#### Step 4 implementation status (2026-11-09)
+
+Step 4 is code-complete in the working tree and is waiting only for the user's final browser acceptance. Micro-steps 4.06 through 4.11 are implemented, and 4.12's automated acceptance checks pass. The last committed step is 4.05 (`73f9c12 feat(dungeon): add cutaway perimeter walls and merged runs`). No Step 4 commit exists yet; by the repository protocol it is created only after the user approves the browser result.
+
+Implemented at this status:
+- Instanced floor and wall renderers, one fixed compound static Rapier body, diorama plinth and trim, development-only Stats and physics-debug controls, and full App integration.
+- Temporary `Floor`, `FloorCollider`, `PhysicsProbe`, and `ReferenceBlock` components were deleted; the real dungeon replaced them.
+- The verifier covers 500 seeds including floor matrices, wall matrices, merged floor collider coverage, full-height wall colliders, plinth collider, spawn, determinism, connectivity, and wall runs.
+
 #### Baseline correction (2026-11-08, micro-step 4.00)
 
 The Step 3 statements above are preserved as history, but the current local checkout does not match them. A read-only audit at HEAD `417fe2a` found:
@@ -284,6 +293,23 @@ The user approved these refinements to the wall portion of section 2.15:
 - Room placement now chooses a deterministic per-seed target in the approved 4 to 6 range instead of always targeting 5. The minimum-4 fallback and bounded attempts are unchanged.
 - The verifier additionally checks exposed floor edges, the outer ring, wall/floor overlap, far-edge height classification, run bounds, and exact run coverage.
 
+### 2.18 Step 4 rendering, collision, plinth, and development tooling decisions (2026-11-09)
+
+The user approved implementing 4.06 through 4.12 end-to-end in one pass and keeping the existing staged 4.06 work. The following decisions are now active:
+
+- **Shared rectangle merge:** `src/game/dungeon/rectangles.ts` owns deterministic greedy two-dimensional rectangle merging. Walls use it for merged runs and the floor collider uses it for merged floor rectangles. Each cell belongs to exactly one rectangle.
+- **Shared grid transform:** `gridToWorld(coordinate, size)` in `src/game/dungeon/constants.ts` is the only zero-indexed-cell to world-space transform. Spawn, floor matrices, wall matrices, and colliders all use it.
+- **4.06 floor rendering:** `DungeonFloor` uses one `InstancedMesh` with a unit-footprint box and per-instance inset scale. Matrix caches are keyed by `${seed}:${size}`. Floor tops sit at `FLOOR_TOP`.
+- **4.07 wall rendering:** `DungeonWalls` uses two `InstancedMesh` batches, one per cutaway height. Geometry owns the fixed wall height, so instance transforms stay per-tile and do not stretch across merged runs. Tall height is `2.2`; low height is `0.6`.
+- **4.08 collision:** `DungeonCollider` is exactly one fixed `<RigidBody colliders={false}>` containing merged floor cuboids, one cuboid per merged wall run, and one plinth cuboid. Floor collider tops sit at `FLOOR_TOP`; floor thickness is `FLOOR_COLLIDER_THICKNESS`.
+- **Low wall collision:** the user confirmed low visual ledges keep full-height (`2.2`) colliders. The cutaway exists for camera visibility, not for walkable shortcuts.
+- **4.09 plinth:** one `20.8 x 0.8 x 20.8` dark stone block with its top at `y = 0` and four thin `0.15` contrasting rails slightly proud of the sides. Rails are used instead of a full top slab so the plinth top stays dark and the walkable floor remains the brightest surface. The plinth does not cast a shadow; its large top face in the shadow map can cause acne on the thin floor plates. The floor material was also lightened to `#3c4a60` so corridors read clearly from the fixed camera.
+- **4.10 development tools:** `DebugOverlay` is a development-only DOM panel bottom-right showing depth, seed, rooms, floor cells, and wall runs. It toggles `StatsGl` (off by default) and runtime Rapier debug rendering. `GamePhysics` reads `physicsDebug` from Zustand, whose initial value still comes from `VITE_DEBUG_PHYSICS`, so toggling does not require a Vite restart. Production builds render no debug controls.
+- **4.11 composition:** `src/components/dungeon/Dungeon.tsx` composes the plinth, floor, walls, and collider from one immutable `DungeonLayout`. `App.tsx` mounts only the dungeon inside `GamePhysics`; the preview floor, duplicate collider, reference block, and physics probe are deleted.
+- **4.12 verification:** `scripts/verify-dungeon.mjs` now also proves floor instance matrices, wall instance matrices, exact merged floor collider coverage, full-height wall colliders, plinth collider dimensions, and spawn placement across 500 seeds.
+- **Draw-call budget:** the dungeon visuals use eight draw calls (floor, tall walls, low walls, plinth, four trim rails). Static collision is one rigid body with merged cuboids and no per-tile rigid bodies. The four trim rails could become one instanced batch later if needed.
+- **Known wording conflict:** 4.08 acceptance says the hero surface is at `y = 0`, while 2.15 and the spawn code use `FLOOR_TOP = 0.06`. `FLOOR_TOP` is authoritative for the walkable surface; y=0 is treated as the nominal ground plane.
+
 ---
 
 ## 3. Environment and Commands
@@ -424,6 +450,16 @@ Ordered roughly by impact on the final product.
 
 ## 6. Next Immediate Task
 
+#### Status update (2026-11-09)
+
+Step 4 is implemented end-to-end. The immediate task is the final browser acceptance of Step 4 described in `docs/steps/04-dungeon-generation/04-12-step-4-end-to-end-acceptance-and-handoff.md`. After the user approves that result:
+
+1. Tick 4.06 through 4.12 in `docs/steps/INDEX.md`.
+2. Mark Step 4 complete and set Step 5 as the next task.
+3. Commit the approved Step 4 changes and report the hash.
+
+Do not start Step 5 before that approval. The historical Step 3 instructions below are preserved unchanged.
+
 **Finish Step 3, then start Step 4 only after approval.**
 
 Step 3 is code-complete and headless-verified. The only remaining work is:
@@ -483,3 +519,10 @@ For the micro-step workflow, `docs/steps/INDEX.md` governs the interaction loop:
 - **2026-11-08 — 4.03 Bounded, non-overlapping room placement:** Added pure `src/game/dungeon/rooms.ts` with a centered 5 to 7 tile start room and 3 to 5 tile later rooms, one-tile spacing, margin and bounds checks, 100-attempt cap, deterministic ordering, populated centers, and an explicit success/failure result. `generateDungeon` now consumes this placement and throws a seed-specific error on failure instead of returning a partial layout. A temporary external harness over 500 seeds found zero failures, always 5 rooms, no bounds or spacing violations, and identical room arrays for identical seeds. TypeScript, lint, and production build pass. Corridor and wall logic is unchanged and remains for 4.04 and 4.05. Next task is 4.04.
 - **2026-11-08 — 4.04 Corridor carving and guaranteed connectivity:** Added `corridors.ts`, `pathfinding.ts`, and `connectivity.ts`. Corridors are one tile wide and routed by deterministic breadth-first search that blocks unrelated rooms and their one-tile buffers. A nearest-room spanning tree guarantees connectivity, followed by at most one optional loop between the longest routable non-tree pair. Floor cells are merged once in stable row-major order and checked with a four-direction flood fill; generation throws if the floor is disconnected. Added `scripts/verify-dungeon.mjs`, which compiles the pure modules to the OS temp directory and verifies 500 seeds without new dependencies. Also declared `VITE_DUNGEON_SEED` in `src/vite-env.d.ts`. All 500 seeds passed with one loop each; TypeScript, lint, and production build pass. Wall generation remains for 4.05. Next task is 4.05.
 - **2026-11-08 — 4.05 Perimeter walls, cutaways, and merged runs:** Added `walls.ts`. Walls cover exposed orthogonal floor edges plus a closed outer ring; far edges `x === 0 || z === 0` stay tall and near/interior walls are low. Low height dropped from `0.75` to `0.6` for future hero visibility. Wall cells merge into greedy 2D rectangles per height with exact single coverage, replacing the old 8-neighbour and horizontal-only logic. Room placement now varies its target across the approved 4 to 6 range. The verifier checks exposed edges, the outer ring, wall/floor overlap, height classification, run bounds, and exact run coverage. All 500 seeds pass: room counts 4/5/6, wall runs 18 to 40, one loop each; TypeScript, lint, and production build pass. Walls are data only; instancing and colliders remain for 4.06 to 4.08. Next task is 4.06.
+- **2026-11-09 — 4.06 Instanced floor rendering:** Kept and refined the staged floor work. `floorInstances.ts` builds one matrix per floor cell from the shared `gridToWorld` transform, aligns tile tops with `FLOOR_TOP`, and caches by `${seed}:${size}`. `DungeonFloor.tsx` copies the cached matrices into one `InstancedMesh` with a unit-footprint box; the inset scale lives only in the instance matrix. The verifier now checks matrix count, caching, scale, and per-cell positions across 500 seeds.
+- **2026-11-09 — 4.07 Instanced wall rendering:** Added `wallInstances.ts` and `DungeonWalls.tsx`. Wall cells split into tall and low batches, each with fixed-height box geometry, so instance transforms stay per-tile and never stretch the stone pattern. Tall walls are `2.2` high, low ledges `0.6`. No transparency, fade, or per-frame occlusion logic was introduced.
+- **2026-11-09 — 4.08 One compound static Rapier collider:** Added `rectangles.ts` for deterministic greedy 2D merging and `colliders.ts` for pure cuboid specs. `DungeonCollider.tsx` is one fixed `<RigidBody colliders={false}>` with merged floor cuboids, one cuboid per merged wall run, and the plinth cuboid. Floor tops sit at `FLOOR_TOP`; all wall colliders use the full tall height, including visually low ledges, per the user's confirmation. `walls.ts` now shares the rectangle merge helper.
+- **2026-11-09 — 4.09 Diorama plinth and floor-edge trim:** Added `DungeonPlinth.tsx`. The `20.8 x 0.8 x 20.8` block has its top at `y = 0`; four thin `0.15` contrasting rails sit just below the top edge. The first attempt used one full-footprint slab, which covered the whole plinth top in trim color and made the floor read as the dark void; rails preserve a dark plinth top. The plinth deliberately does not cast shadows, because its large top face in the shadow map can cause acne on the thin floor plates. Floor material was lightened to `#3c4a60` for corridor legibility. No global styles or color tokens were changed.
+- **2026-11-09 — 4.10 Development Stats and runtime physics-debug controls:** Added `DebugOverlay.tsx` and its SCSS module, plus `DungeonStats.tsx`. The overlay is development-only, starts closed, and shows depth, seed, rooms, floor cells, and wall runs. It toggles `StatsGl` (off by default) and runtime Rapier debug rendering. `GamePhysics.tsx` now reads `physicsDebug` from Zustand; `VITE_DEBUG_PHYSICS` remains the initial value. Production builds render no controls.
+- **2026-11-09 — 4.11 Compose dungeon in App and remove temporary probes:** Added `Dungeon.tsx` to compose the plinth, floor, walls, and collider from one layout. `App.tsx` mounts only the dungeon inside the existing canvas, camera, lighting, physics, and effects. Deleted `Floor.tsx`, `FloorCollider.tsx`, `PhysicsProbe.tsx`, and `ReferenceBlock.tsx`. The temporary badge now reads `Step 4 - Dungeon Generation` and shows depth plus seed.
+- **2026-11-09 — 4.12 Step 4 acceptance checks (awaiting browser approval):** Extended `scripts/verify-dungeon.mjs` to verify floor instance matrices, wall instance matrices, exact merged floor collider coverage, full-height wall colliders, plinth collider dimensions, and spawn placement. All 500 seeds pass; `npx tsc -b --pretty false`, `npm run lint`, `npm run build`, and `git diff --check` pass. A headless Chrome capture showed the instanced dungeon, plinth, and development button; a raw no-effects capture exposed plinth shadow acne on the floor, which was fixed by removing the plinth's cast shadow. Final user browser acceptance, INDEX ticks, the parent Step 4 completion, and the commit remain pending.

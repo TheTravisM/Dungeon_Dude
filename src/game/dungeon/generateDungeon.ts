@@ -1,5 +1,5 @@
 import type { DungeonLayout, Position } from '../../types';
-import { DUNGEON_SIZE, FLOOR_TOP } from './constants';
+import { DUNGEON_SIZE, FLOOR_TOP, gridToWorld } from './constants';
 import { isFullyConnected } from './connectivity';
 import { carveCorridors } from './corridors';
 import { createRandom } from './random';
@@ -35,9 +35,9 @@ export function generateDungeon(seed: number, size = DUNGEON_SIZE): DungeonLayou
 
   const spawnCell = rooms[0].center;
   const spawn: Position = {
-    x: spawnCell.x - (size - 1) / 2,
+    x: gridToWorld(spawnCell.x, size),
     y: FLOOR_TOP,
-    z: spawnCell.z - (size - 1) / 2,
+    z: gridToWorld(spawnCell.z, size),
   };
 
   return { seed, size, rooms, floorCells, wallCells, wallRuns, spawn };

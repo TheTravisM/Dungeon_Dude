@@ -4,6 +4,7 @@ import type {
   GridCell,
   WallHeight,
 } from '../../types';
+import { mergeMaskRectangles } from './rectangles';
 
 export interface WallGenerationResult {
   wallCells: DungeonWallCell[];
@@ -15,7 +16,7 @@ const LOW = 1;
 const TALL = 2;
 type WallValue = typeof NONE | typeof LOW | typeof TALL;
 
-function heightFor(value: WallValue): WallHeight {
+function heightFor(value: number): WallHeight {
   return value === TALL ? 'tall' : 'low';
 }
 
@@ -81,50 +82,16 @@ export function generateWalls(
  * Greedy rectangle merge per height. Each wall cell belongs to exactly one run,
  * which keeps the collider set free of overlaps and corner gaps. Rectangles are
  * preferred over strips so long perimeter and room walls become a few cuboids.
+ * The merge algorithm is shared with the floor collider so both stay consistent.
  */
 function mergeWallRuns(wallMask: Uint8Array, size: number): DungeonWallRun[] {
-  const index = (x: number, z: number) => z * size + x;
-  const used = new Uint8Array(size * size);
-  const runs: DungeonWallRun[] = [];
-
-  for (const value of [TALL, LOW] as const) {
-    for (let z = 0; z < size; z++) {
-      for (let x = 0; x < size; x++) {
-        if (wallMask[index(x, z)] !== value || used[index(x, z)] === 1) continue;
-
-        let width = 1;
-        while (
-          x + width < size &&
-          wallMask[index(x + width, z)] === value &&
-          used[index(x + width, z)] === 0
-        ) {
-          width++;
-        }
-
-        let depth = 1;
-        while (z + depth < size) {
-          let rowMatches = true;
-          for (let offsetX = x; offsetX < x + width; offsetX++) {
-            const cellIndex = index(offsetX, z + depth);
-            if (wallMask[cellIndex] !== value || used[cellIndex] === 1) {
-              rowMatches = false;
-              break;
-            }
-          }
-          if (!rowMatches) break;
-          depth++;
-        }
-
-        for (let offsetZ = z; offsetZ < z + depth; offsetZ++) {
-          for (let offsetX = x; offsetX < x + width; offsetX++) {
-            used[index(offsetX, offsetZ)] = 1;
-          }
-        }
-
-        runs.push({ x, z, width, depth, height: heightFor(value) });
-      }
-    }
-  }
-
-  return runs;
+  return mergeMaskRectangles(wallMask, size, [TALL, LOW]).map(
+    ({ x, z, width, depth, value }) => ({
+      x,
+      z,
+      width,
+      depth,
+      height: heightFor(value),
+    })
+  );
 }

@@ -1,0 +1,9 @@
+// stats-gl injects its panel into the document body, so this class is applied
+// to that external element rather than a React-owned wrapper.
+.stats {
+  position: fixed;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 20;
+  pointer-events: none;
+}

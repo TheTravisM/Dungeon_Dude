@@ -24,7 +24,11 @@ const sources = [
   'src/game/dungeon/connectivity.ts',
   'src/game/dungeon/pathfinding.ts',
   'src/game/dungeon/corridors.ts',
+  'src/game/dungeon/rectangles.ts',
   'src/game/dungeon/walls.ts',
+  'src/game/dungeon/floorInstances.ts',
+  'src/game/dungeon/wallInstances.ts',
+  'src/game/dungeon/colliders.ts',
   'src/game/dungeon/generateDungeon.ts',
 ];
 
@@ -60,9 +64,24 @@ try {
   const { isFullyConnected } = await load('connectivity.js');
   const { createRandom } = await load('random.js');
   const { placeRooms } = await load('rooms.js');
-  const { DUNGEON_SIZE, WALL_HEIGHT_LOW } = await load('constants.js');
+  const {
+    DUNGEON_SIZE,
+    WALL_HEIGHT_LOW,
+    WALL_HEIGHT_TALL,
+    FLOOR_TOP,
+    FLOOR_TILE_HEIGHT,
+    FLOOR_TILE_INSET,
+    FLOOR_COLLIDER_THICKNESS,
+    PLINTH_SIZE,
+    PLINTH_HEIGHT,
+    gridToWorld,
+  } = await load('constants.js');
+  const { getFloorInstanceMatrices } = await load('floorInstances.js');
+  const { getWallInstanceData } = await load('wallInstances.js');
+  const { getDungeonColliderSpecs } = await load('colliders.js');
 
   if (WALL_HEIGHT_LOW !== 0.6) fail(`expected low wall height 0.6, got ${WALL_HEIGHT_LOW}`);
+  if (!(WALL_HEIGHT_TALL > WALL_HEIGHT_LOW)) fail('tall walls must be higher than low walls');
 
   const SEEDS = 500;
   let checked = 0;
@@ -70,6 +89,33 @@ try {
   const roomCounts = new Map();
   let minWallRuns = Number.POSITIVE_INFINITY;
   let maxWallRuns = 0;
+
+  const checkWallBatch = (seed, matrices, cells, height, layout, label) => {
+    if (matrices.length !== cells.length * 16) {
+      fail(`seed ${seed}: ${label} wall instance count is wrong`);
+      return;
+    }
+    for (let index = 0; index < cells.length; index++) {
+      const cell = cells[index];
+      const offset = index * 16;
+      if (
+        matrices[offset] !== 1 ||
+        matrices[offset + 5] !== 1 ||
+        matrices[offset + 10] !== 1
+      ) {
+        fail(`seed ${seed}: ${label} wall instance ${index} has an unexpected scale`);
+        break;
+      }
+      if (
+        Math.abs(matrices[offset + 12] - gridToWorld(cell.x, layout.size)) > 1e-6 ||
+        Math.abs(matrices[offset + 13] - height / 2) > 1e-6 ||
+        Math.abs(matrices[offset + 14] - gridToWorld(cell.z, layout.size)) > 1e-6
+      ) {
+        fail(`seed ${seed}: ${label} wall instance ${index} is not on its grid cell`);
+        break;
+      }
+    }
+  };
 
   for (let seed = 1; seed <= SEEDS; seed++) {
     const layout = generateDungeon(seed);
@@ -104,6 +150,40 @@ try {
 
     if (!isFullyConnected(layout.floorCells, layout.size, layout.rooms[0].center)) {
       fail(`seed ${seed}: floor is not fully connected`);
+    }
+
+    const matrices = getFloorInstanceMatrices(layout);
+    const stride = 16;
+    const expectedScale = 1 - FLOOR_TILE_INSET * 2;
+    const expectedY = FLOOR_TOP - FLOOR_TILE_HEIGHT / 2;
+    const halfExtent = (layout.size - 1) / 2;
+
+    if (matrices.length !== layout.floorCells.length * stride) {
+      fail(`seed ${seed}: floor instance matrix count is wrong`);
+    }
+    if (getFloorInstanceMatrices(layout) !== matrices) {
+      fail(`seed ${seed}: floor instance matrices are not cached`);
+    }
+
+    for (let index = 0; index < layout.floorCells.length; index++) {
+      const cell = layout.floorCells[index];
+      const offset = index * stride;
+      if (
+        Math.abs(matrices[offset] - expectedScale) > 1e-6 ||
+        Math.abs(matrices[offset + 5] - 1) > 1e-6 ||
+        Math.abs(matrices[offset + 10] - expectedScale) > 1e-6
+      ) {
+        fail(`seed ${seed}: floor instance ${index} has an unexpected scale`);
+        break;
+      }
+      if (
+        Math.abs(matrices[offset + 12] - (cell.x - halfExtent)) > 1e-6 ||
+        Math.abs(matrices[offset + 13] - expectedY) > 1e-6 ||
+        Math.abs(matrices[offset + 14] - (cell.z - halfExtent)) > 1e-6
+      ) {
+        fail(`seed ${seed}: floor instance ${index} is not on its grid cell`);
+        break;
+      }
     }
 
     const floorSet = new Set(keys);
@@ -193,6 +273,97 @@ try {
     }
     minWallRuns = Math.min(minWallRuns, layout.wallRuns.length);
     maxWallRuns = Math.max(maxWallRuns, layout.wallRuns.length);
+
+    // Wall rendering must place every wall cell exactly once, with its batch
+    // height matching the cutaway classification.
+    const wallInstances = getWallInstanceData(layout);
+    const tallCells = layout.wallCells.filter((cell) => cell.height === 'tall');
+    const lowCells = layout.wallCells.filter((cell) => cell.height === 'low');
+    if (wallInstances.tallCount !== tallCells.length) {
+      fail(`seed ${seed}: tall wall instance count is wrong`);
+    }
+    if (wallInstances.lowCount !== lowCells.length) {
+      fail(`seed ${seed}: low wall instance count is wrong`);
+    }
+    if (getWallInstanceData(layout) !== wallInstances) {
+      fail(`seed ${seed}: wall instance data is not cached`);
+    }
+    checkWallBatch(seed, wallInstances.tall, tallCells, WALL_HEIGHT_TALL, layout, 'tall');
+    checkWallBatch(seed, wallInstances.low, lowCells, WALL_HEIGHT_LOW, layout, 'low');
+
+    // Static collision must cover every floor cell exactly once and keep wall
+    // colliders at full height even where the renderer draws a low ledge.
+    const specs = getDungeonColliderSpecs(layout);
+    if (getDungeonColliderSpecs(layout) !== specs) {
+      fail(`seed ${seed}: collider specs are not cached`);
+    }
+    if (specs.floorColliders.length !== specs.floorRects.length) {
+      fail(`seed ${seed}: floor collider count does not match merged floor rectangles`);
+    }
+    const coveredFloor = new Set();
+    for (const rect of specs.floorRects) {
+      if (
+        rect.width < 1 ||
+        rect.depth < 1 ||
+        rect.x < 0 ||
+        rect.z < 0 ||
+        rect.x + rect.width > layout.size ||
+        rect.z + rect.depth > layout.size
+      ) {
+        fail(`seed ${seed}: floor rectangle is outside the grid`);
+        continue;
+      }
+      for (let z = rect.z; z < rect.z + rect.depth; z++) {
+        for (let x = rect.x; x < rect.x + rect.width; x++) {
+          const key = `${x},${z}`;
+          if (coveredFloor.has(key)) fail(`seed ${seed}: floor rectangle overlap at ${key}`);
+          if (!floorSet.has(key)) fail(`seed ${seed}: floor rectangle covers non-floor ${key}`);
+          coveredFloor.add(key);
+        }
+      }
+    }
+    if (coveredFloor.size !== floorSet.size) {
+      fail(
+        `seed ${seed}: floor rectangles cover ${coveredFloor.size} of ${floorSet.size} cells`
+      );
+    }
+    for (const collider of specs.floorColliders) {
+      const top = collider.position[1] + collider.halfExtents[1];
+      if (Math.abs(top - FLOOR_TOP) > 1e-6) {
+        fail(`seed ${seed}: floor collider top is not at FLOOR_TOP`);
+        break;
+      }
+      if (Math.abs(collider.halfExtents[1] - FLOOR_COLLIDER_THICKNESS / 2) > 1e-6) {
+        fail(`seed ${seed}: floor collider thickness is wrong`);
+        break;
+      }
+    }
+    if (specs.wallColliders.length !== layout.wallRuns.length) {
+      fail(`seed ${seed}: wall collider count does not match merged wall runs`);
+    }
+    for (const collider of specs.wallColliders) {
+      if (Math.abs(collider.halfExtents[1] - WALL_HEIGHT_TALL / 2) > 1e-6) {
+        fail(`seed ${seed}: wall collider is not full height`);
+        break;
+      }
+    }
+    if (
+      Math.abs(specs.plinthCollider.halfExtents[0] - PLINTH_SIZE / 2) > 1e-6 ||
+      Math.abs(specs.plinthCollider.halfExtents[1] - PLINTH_HEIGHT / 2) > 1e-6 ||
+      Math.abs(specs.plinthCollider.position[1] + PLINTH_HEIGHT / 2) > 1e-6
+    ) {
+      fail(`seed ${seed}: plinth collider does not match the plinth constants`);
+    }
+
+    const expectedSpawnX = gridToWorld(layout.rooms[0].center.x, layout.size);
+    const expectedSpawnZ = gridToWorld(layout.rooms[0].center.z, layout.size);
+    if (
+      Math.abs(layout.spawn.x - expectedSpawnX) > 1e-6 ||
+      Math.abs(layout.spawn.z - expectedSpawnZ) > 1e-6 ||
+      Math.abs(layout.spawn.y - FLOOR_TOP) > 1e-6
+    ) {
+      fail(`seed ${seed}: spawn does not match the start room center`);
+    }
 
     const rng = createRandom(seed);
     const placement = placeRooms(rng, layout.size);

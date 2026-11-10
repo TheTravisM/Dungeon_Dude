@@ -69,3 +69,12 @@ export const PLINTH_TRIM_WIDTH = 0.15;
 
 /** Collision slab under the whole grid. It only needs to stop falling bodies. */
 export const FLOOR_COLLIDER_THICKNESS = 0.4;
+
+/**
+ * Converts a zero-indexed grid coordinate to the world-space center of that
+ * cell. An even-sized grid sits half a unit off the origin, which is expected;
+ * every renderer and collider uses this one transform so they cannot drift.
+ */
+export function gridToWorld(coordinate: number, size: number = DUNGEON_SIZE): number {
+  return coordinate - (size - 1) / 2;
+}

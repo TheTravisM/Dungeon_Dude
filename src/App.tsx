@@ -1,12 +1,13 @@
+import { useState } from 'react';
 import { Canvas } from '@react-three/fiber';
+import DebugOverlay from './components/debug/DebugOverlay';
+import DungeonStats from './components/debug/DungeonStats';
+import Dungeon from './components/dungeon/Dungeon';
 import Effects from './components/Effects';
-import FloorCollider from './components/physics/FloorCollider';
 import GamePhysics from './components/physics/GamePhysics';
-import PhysicsProbe from './components/physics/PhysicsProbe';
-import Floor from './components/scene/Floor';
 import IsometricCamera from './components/scene/IsometricCamera';
 import Lighting from './components/scene/Lighting';
-import ReferenceBlock from './components/scene/ReferenceBlock';
+import { getDungeonLayout } from './game/dungeon/getDungeonLayout';
 import { useGameStore } from './game/store';
 import styles from './App.module.scss';
 
@@ -19,6 +20,11 @@ export default function App() {
   // Depth is a rare UI-level change, so a store subscription is appropriate.
   // Per-frame data stays in the ECS world instead.
   const currentDepth = useGameStore((state) => state.currentDepth);
+  const layout = getDungeonLayout(currentDepth);
+
+  // Diagnostics are a deliberate, infrequent UI action. Keeping the switch here
+  // lets the DOM overlay and the in-canvas StatsGl share one piece of state.
+  const [statsVisible, setStatsVisible] = useState(false);
 
   return (
     <div className={styles.app}>
@@ -33,21 +39,27 @@ export default function App() {
           <IsometricCamera />
           <Lighting />
           <GamePhysics>
-            <Floor />
-            <FloorCollider />
-            <ReferenceBlock />
-            <PhysicsProbe />
+            <Dungeon layout={layout} />
           </GamePhysics>
           <Effects />
+          <DungeonStats visible={statsVisible} />
         </Canvas>
       </div>
 
-      <div className={styles.uiLayer} aria-hidden="true">
+      <div className={styles.uiLayer}>
         <div className={styles.badge}>
           <span className={styles.badgeTitle}>Dungeon Dude</span>
-          <span className={styles.badgeStep}>Step 3 - ECS and Physics</span>
-          <span className={styles.badgeMeta}>Depth {currentDepth}</span>
+          <span className={styles.badgeStep}>Step 4 - Dungeon Generation</span>
+          <span className={styles.badgeMeta}>
+            Depth {currentDepth} / Seed {layout.seed}
+          </span>
         </div>
+        <DebugOverlay
+          depth={currentDepth}
+          layout={layout}
+          statsVisible={statsVisible}
+          onToggleStats={() => setStatsVisible((visible) => !visible)}
+        />
       </div>
     </div>
   );
