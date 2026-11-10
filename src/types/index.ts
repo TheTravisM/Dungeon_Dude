@@ -80,7 +80,7 @@ export interface Entity {
   
   // Spatial data
   position?: Vector3;
-  velocity?: Vector3;
+  velocity?: [number, number, number]; // [x, y, z] movement vector
   
   // Combat stats
   health?: number;
@@ -90,4 +90,8 @@ export interface Entity {
   // AI State
   targetPosition?: Vector3;
   state?: 'idle' | 'patrol' | 'chase' | 'attack' | 'dead';
+
+  // Additions for Step 5
+  isPlayer?: boolean;
+  heading?: number; // Radians for visual mesh rotation
 }

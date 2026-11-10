@@ -33,3 +33,5 @@ dist-ssr
 
 # AI config (optional, remove if you want to track rules in git)
 # .cursorrules
+local-test.txt
+docs/scratch.txt
