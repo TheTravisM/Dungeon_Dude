@@ -1,11 +1,152 @@
+import { useEffect, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { RigidBody, type RapierRigidBody } from '@react-three/rapier';
+import { damp, damp3, dampAngle } from 'maath/easing';
+import * as THREE from 'three';
 import type { Vector3Tuple } from 'three';
-import TorchLight from './TorchLight';
+import { createHero, world } from '../../game/ecs';
+import { usePlayerInput } from '../../hooks/usePlayerInput';
+import type { Entity } from '../../types';
+import TorchLight, { TorchFlame } from './TorchLight';
 
 interface HeroProps {
   /** World position of the hero's feet, matching the dungeon spawn convention. */
   position: Vector3Tuple;
-  /** Defaults to a three-quarter view facing the fixed isometric camera. */
-  rotationY?: number;
+}
+
+/** Walk speed in world units per second. */
+const SPEED = 5;
+/** Walk-cycle bob frequency (radians/second) and amplitude (world units). */
+const WALK_FREQUENCY = 10;
+const WALK_AMPLITUDE = 0.05;
+/**
+ * Initial heading: the three-quarter view facing the fixed isometric camera,
+ * using the model's local -Z forward convention.
+ */
+const INITIAL_HEADING = -Math.PI * 0.75;
+/**
+ * Camera offset from the hero, kept on the (1,1,1) diagonal so the damped
+ * follow preserves the diorama's isometric angle. For an orthographic camera
+ * the offset length only affects depth, never the zoom.
+ */
+const CAMERA_OFFSET: [number, number, number] = [10, 10, 10];
+/** Torch anchor: the flame in the right hand, in body-local space. */
+const TORCH_ANCHOR: [number, number, number] = [0.38, 1.05, -0.02];
+
+/** Scratch vector so the frame loop does not allocate. */
+const scratchMove = new THREE.Vector3();
+
+/**
+ * Playable hero: a kinematic rigid body driven by player input, the visual
+ * model, the stable torch spotlight, and the isometric camera follow. The
+ * ECS entity mirrors the body so AI and debug systems can read the player
+ * without touching the physics world.
+ *
+ * The body itself never rotates. The heading is applied to the walk-cycle
+ * group and the torch anchor, which keeps the auto-generated cuboid collider
+ * axis aligned and the spotlight free of the walk-cycle bob.
+ */
+export default function Hero({ position }: HeroProps) {
+  const bodyRef = useRef<RapierRigidBody>(null);
+  const visualRef = useRef<THREE.Group>(null);
+  const torchRef = useRef<THREE.Group>(null);
+  const headingRef = useRef({ y: INITIAL_HEADING });
+  const entityRef = useRef<Entity | null>(null);
+  const { sample } = usePlayerInput();
+
+  // Register the hero in the ECS world for the lifetime of the component.
+  useEffect(() => {
+    const entity = createHero(
+      new THREE.Vector3(position[0], position[1], position[2])
+    );
+    world.update(entity, { isPlayer: true, heading: INITIAL_HEADING });
+    entityRef.current = entity;
+    return () => {
+      world.remove(entity);
+      entityRef.current = null;
+    };
+    // The body teleports when the position prop changes; the entity is
+    // created at the same spawn and removed on unmount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useFrame((state, delta) => {
+    const body = bodyRef.current;
+    if (!body) return;
+    const input = sample();
+    const pos = body.translation();
+
+    // 1. Move the kinematic body along the input direction.
+    if (input.isMoving) {
+      const move = scratchMove.copy(input.direction).multiplyScalar(SPEED * delta);
+      body.setNextKinematicTranslation({
+        x: pos.x + move.x,
+        y: pos.y,
+        z: pos.z + move.z,
+      });
+    }
+
+    // 2. Face the movement direction (shortest path), hold it when idle.
+    const targetHeading = input.isMoving
+      ? Math.atan2(-input.direction.x, -input.direction.z)
+      : headingRef.current.y;
+    dampAngle(headingRef.current, 'y', targetHeading, 0.15, delta);
+    if (visualRef.current) visualRef.current.rotation.y = headingRef.current.y;
+    if (torchRef.current) torchRef.current.rotation.y = headingRef.current.y;
+
+    // 3. Walk cycle: bob the visual group only, never the torch light.
+    if (visualRef.current) {
+      const bobTarget = input.isMoving
+        ? Math.sin(state.clock.elapsedTime * WALK_FREQUENCY) * WALK_AMPLITUDE
+        : 0;
+      damp(visualRef.current.position, 'y', bobTarget, 0.1, delta);
+    }
+
+    // 4. Camera follow, preserving the isometric angle.
+    damp3(
+      state.camera.position,
+      [
+        pos.x + CAMERA_OFFSET[0],
+        pos.y + CAMERA_OFFSET[1],
+        pos.z + CAMERA_OFFSET[2],
+      ],
+      0.2,
+      delta
+    );
+    state.camera.lookAt(pos.x, pos.y, pos.z);
+
+    // 5. Mirror the body into the ECS entity for AI and debug systems.
+    const entity = entityRef.current;
+    if (entity) {
+      if (entity.position) entity.position.set(pos.x, pos.y, pos.z);
+      if (entity.velocity) {
+        entity.velocity[0] = input.isMoving ? input.direction.x * SPEED : 0;
+        entity.velocity[1] = 0;
+        entity.velocity[2] = input.isMoving ? input.direction.z * SPEED : 0;
+      }
+      entity.heading = headingRef.current.y;
+    }
+  });
+  return (
+    <RigidBody
+      ref={bodyRef}
+      type="kinematicPosition"
+      colliders="cuboid"
+      canSleep={false}
+      lockRotations
+      position={position}
+    >
+      {/* Walk-cycle visual: bobs in Y and rotates toward the heading. */}
+      <group ref={visualRef} rotation={[0, INITIAL_HEADING, 0]}>
+        <HeroModel />
+      </group>
+
+      {/* Torch anchor: stable (no bob), rotates toward the heading. */}
+      <group ref={torchRef} position={TORCH_ANCHOR} rotation={[0, INITIAL_HEADING, 0]}>
+        <TorchLight />
+      </group>
+    </RigidBody>
+  );
 }
 
 /**
@@ -18,9 +159,9 @@ interface HeroProps {
  * Shoulders stay under the 0.28 capsule radius so the model does not visibly
  * clip through one-tile corridors.
  */
-export default function Hero({ position, rotationY = -Math.PI * 0.75 }: HeroProps) {
+function HeroModel() {
   return (
-    <group position={position} rotation={[0, rotationY, 0]}>
+    <group>
       {/* Boots and legs. The gap between them keeps the silhouette readable. */}
       <mesh position={[-0.11, 0.07, -0.03]} castShadow receiveShadow>
         <boxGeometry args={[0.16, 0.14, 0.26]} />
@@ -103,8 +244,8 @@ export default function Hero({ position, rotationY = -Math.PI * 0.75 }: HeroProp
 
       {/*
         Torch in the right hand. The group is tilted outward so the handle and
-        head clear the arm instead of reading as one dark column. The flame and
-        shadow-casting spotlight live in TorchLight.
+        head clear the arm instead of reading as one dark column. The flame is
+        visual only; the shadow-casting spotlight is anchored to the body.
       */}
       <group position={[0.315, 0.49, -0.02]} rotation={[0, 0, -0.12]}>
         <mesh position={[0, 0.18, 0]} castShadow>
@@ -120,7 +261,7 @@ export default function Hero({ position, rotationY = -Math.PI * 0.75 }: HeroProp
           <meshStandardMaterial color="#3a2a1e" roughness={0.7} metalness={0.35} />
         </mesh>
         <group position={[0, 0.56, 0]}>
-          <TorchLight />
+          <TorchFlame />
         </group>
       </group>
 

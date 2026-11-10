@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { KeyboardControls } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import DebugOverlay from './components/debug/DebugOverlay';
 import DungeonStats from './components/debug/DungeonStats';
@@ -17,6 +18,18 @@ import styles from './App.module.scss';
  * canvas and the DOM overlay, while focused scene components own the meshes
  * and lights. This keeps future UI work from bleeding into render code.
  */
+
+/**
+ * Keyboard map for the hero controller. WASD and the arrow keys drive the
+ * same four logical directions so both input styles feel identical.
+ */
+const KEYBOARD_CONTROLS = [
+  { name: 'forward', keys: ['KeyW', 'ArrowUp'], up: true },
+  { name: 'backward', keys: ['KeyS', 'ArrowDown'], up: true },
+  { name: 'left', keys: ['KeyA', 'ArrowLeft'], up: true },
+  { name: 'right', keys: ['KeyD', 'ArrowRight'], up: true },
+];
+
 export default function App() {
   // Depth is a rare UI-level change, so a store subscription is appropriate.
   // Per-frame data stays in the ECS world instead.
@@ -30,28 +43,30 @@ export default function App() {
   return (
     <div className={styles.app}>
       <div className={styles.canvasLayer}>
-        <Canvas
-          shadows="percentage"
-          dpr={[1, 2]}
-          orthographic
-          camera={{ position: [20, 20, 20], zoom: 40, near: 0.1, far: 200 }}
-        >
-          <color attach="background" args={['#0b0e14']} />
-          <IsometricCamera />
-          <Lighting />
-          <GamePhysics>
-            <Dungeon layout={layout} />
-            <Hero position={[layout.spawn.x, layout.spawn.y, layout.spawn.z]} />
-          </GamePhysics>
-          <Effects />
-          <DungeonStats visible={statsVisible} />
-        </Canvas>
+        <KeyboardControls map={KEYBOARD_CONTROLS}>
+          <Canvas
+            shadows="percentage"
+            dpr={[1, 2]}
+            orthographic
+            camera={{ position: [20, 20, 20], zoom: 40, near: 0.1, far: 200 }}
+          >
+            <color attach="background" args={['#0b0e14']} />
+            <IsometricCamera />
+            <Lighting />
+            <GamePhysics>
+              <Dungeon layout={layout} />
+              <Hero position={[layout.spawn.x, layout.spawn.y, layout.spawn.z]} />
+            </GamePhysics>
+            <Effects />
+            <DungeonStats visible={statsVisible} />
+          </Canvas>
+        </KeyboardControls>
       </div>
 
       <div className={styles.uiLayer}>
         <div className={styles.badge}>
           <span className={styles.badgeTitle}>Dungeon Dude</span>
-          <span className={styles.badgeStep}>Step 4 - Dungeon Generation</span>
+          <span className={styles.badgeStep}>Step 5 - Hero Controller</span>
           <span className={styles.badgeMeta}>
             Depth {currentDepth} / Seed {layout.seed}
           </span>
