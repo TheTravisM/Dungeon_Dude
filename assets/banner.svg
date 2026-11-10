@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#200202"/>
+      <stop offset="55%" stop-color="#0d0000"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+    <radialGradient id="moon" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#ff6b4a"/>
+      <stop offset="55%" stop-color="#b3121a"/>
+      <stop offset="100%" stop-color="#6a040f"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffe9a3"/>
+      <stop offset="45%" stop-color="#d4af37"/>
+      <stop offset="100%" stop-color="#8a6d1a"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3d0505"/>
+      <stop offset="50%" stop-color="#8b0000"/>
+      <stop offset="100%" stop-color="#3d0505"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="320" fill="url(#bg)"/>
+  <circle cx="1085" cy="88" r="72" fill="none" stroke="#8b0000" stroke-opacity="0.4" stroke-width="2"/>
+  <circle cx="1085" cy="88" r="56" fill="url(#moon)"/>
+  <rect x="8" y="8" width="1264" height="304" fill="none" stroke="url(#edge)" stroke-width="2"/>
+  <rect x="16" y="16" width="1248" height="288" fill="none" stroke="#d4af37" stroke-opacity="0.5" stroke-width="1"/>
+  <g fill="#d4af37">
+    <rect x="26" y="26" width="8" height="8" transform="rotate(45 30 30)"/>
+    <rect x="1246" y="26" width="8" height="8" transform="rotate(45 1250 30)"/>
+    <rect x="26" y="286" width="8" height="8" transform="rotate(45 30 290)"/>
+    <rect x="1246" y="286" width="8" height="8" transform="rotate(45 1250 290)"/>
+  </g>
+  <text x="640" y="158" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="86" letter-spacing="12" fill="url(#gold)">DUNGEON DUDE</text>
+  <line x1="480" y1="182" x2="800" y2="182" stroke="#d4af37" stroke-opacity="0.6" stroke-width="1"/>
+  <rect x="636" y="178" width="8" height="8" transform="rotate(45 640 182)" fill="#8b0000"/>
+  <text x="640" y="222" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="18" letter-spacing="5" fill="#b7a98a">A DIABLO-INSPIRED ISOMETRIC DUNGEON CRAWLER</text>
+  <text x="640" y="272" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="13" letter-spacing="4" fill="#8d7b52">EST. 1337 — THE FIRST DESCENT</text>
+</svg>

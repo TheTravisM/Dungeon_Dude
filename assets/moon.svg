@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <defs>
+    <radialGradient id="moon" cx="45%" cy="42%" r="60%">
+      <stop offset="0%" stop-color="#ff6b4a"/>
+      <stop offset="55%" stop-color="#b3121a"/>
+      <stop offset="100%" stop-color="#6a040f"/>
+    </radialGradient>
+  </defs>
+  <circle cx="80" cy="80" r="70" fill="none" stroke="#8b0000" stroke-opacity="0.4" stroke-width="2"/>
+  <circle cx="80" cy="80" r="58" fill="url(#moon)"/>
+  <circle cx="62" cy="66" r="9" fill="#6a040f" opacity="0.35"/>
+  <circle cx="96" cy="92" r="12" fill="#6a040f" opacity="0.3"/>
+  <circle cx="70" cy="102" r="6" fill="#6a040f" opacity="0.3"/>
+</svg>

@@ -173,19 +173,19 @@ Do not start feature implementation until the baseline check is understood and a
 | [x] | 4.03 | Bounded, non-overlapping room placement |
 | [x] | 4.04 | Corridor carving and guaranteed connectivity |
 | [x] | 4.05 | Perimeter walls, camera cutaways, and merged wall runs |
-| [ ] | 4.06 | Instanced floor rendering |
-| [ ] | 4.07 | Instanced wall rendering |
-| [ ] | 4.08 | One compound static Rapier collider |
-| [ ] | 4.09 | Diorama plinth and floor-edge trim |
-| [ ] | 4.10 | Development Stats and runtime physics-debug controls |
-| [ ] | 4.11 | Compose dungeon in App and remove temporary probes |
-| [ ] | 4.12 | Step 4 end-to-end acceptance and handoff |
+| [x] | 4.06 | Instanced floor rendering |
+| [x] | 4.07 | Instanced wall rendering |
+| [x] | 4.08 | One compound static Rapier collider |
+| [x] | 4.09 | Diorama plinth and floor-edge trim |
+| [x] | 4.10 | Development Stats and runtime physics-debug controls |
+| [x] | 4.11 | Compose dungeon in App and remove temporary probes |
+| [x] | 4.12 | Step 4 end-to-end acceptance and handoff |
 
 ## 5. Step 5 — Hero and Autonomous AI
 
 | Status | Micro-step | Task |
 |---|---|---|
-| [ ] | 5.01 | Hero visual model |
+| [x] | 5.01 | Hero visual model |
 | [ ] | 5.02 | Torch visuals and efficient lighting |
 | [ ] | 5.03 | Hero Miniplex lifecycle registration |
 | [ ] | 5.04 | Kinematic body and capsule collider |

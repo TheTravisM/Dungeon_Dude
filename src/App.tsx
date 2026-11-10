@@ -4,6 +4,7 @@ import DebugOverlay from './components/debug/DebugOverlay';
 import DungeonStats from './components/debug/DungeonStats';
 import Dungeon from './components/dungeon/Dungeon';
 import Effects from './components/Effects';
+import Hero from './components/hero/Hero';
 import GamePhysics from './components/physics/GamePhysics';
 import IsometricCamera from './components/scene/IsometricCamera';
 import Lighting from './components/scene/Lighting';
@@ -40,6 +41,7 @@ export default function App() {
           <Lighting />
           <GamePhysics>
             <Dungeon layout={layout} />
+            <Hero position={[layout.spawn.x, layout.spawn.y, layout.spawn.z]} />
           </GamePhysics>
           <Effects />
           <DungeonStats visible={statsVisible} />

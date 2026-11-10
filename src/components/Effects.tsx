@@ -24,7 +24,7 @@ export default function Effects() {
         blendFunction={BlendFunction.NORMAL}
         offset={0}
         rotation={0}
-        focusArea={0.35}
+        focusArea={0.75}
         feather={0.5}
         kernelSize={KernelSize.MEDIUM}
         resolutionScale={0.5}
