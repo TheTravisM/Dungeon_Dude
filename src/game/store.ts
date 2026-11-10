@@ -22,6 +22,7 @@ export const useGameStore = create<GameState>()((set) => ({
   currentDepth: startingLevel,
   goldCollected: 0,
   monstersSlain: 0,
+  hasKey: false,
   debugPanelOpen: false,
   physicsDebug: initialPhysicsDebug,
 
@@ -32,10 +33,15 @@ export const useGameStore = create<GameState>()((set) => ({
   incrementMonstersSlain: () =>
     set((state) => ({ monstersSlain: state.monstersSlain + 1 })),
 
+  setHasKey: (hasKey) => set({ hasKey }),
+
+  // The key is consumed by the descent: the rebuilt tree starts keyless, and
+  // the store must agree so the HUD never shows a spent key.
   descendToNextLevel: () =>
     set((state) => ({
       currentDepth: state.currentDepth + 1,
       isAutoMode: true,
+      hasKey: false,
     })),
 
   toggleDebugPanel: () => set((state) => ({ debugPanelOpen: !state.debugPanelOpen })),

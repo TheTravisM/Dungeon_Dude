@@ -17,11 +17,13 @@ export interface GameState {
   currentDepth: number;
   goldCollected: number;
   monstersSlain: number;
+  hasKey: boolean;
   debugPanelOpen: boolean;
   physicsDebug: boolean;
   setAutoMode: (isAuto: boolean) => void;
   incrementGold: (amount: number) => void;
   incrementMonstersSlain: () => void;
+  setHasKey: (hasKey: boolean) => void;
   descendToNextLevel: () => void;
   toggleDebugPanel: () => void;
   togglePhysicsDebug: () => void;
@@ -92,4 +94,8 @@ export interface Entity {
   // Additions for Step 5
   isPlayer?: boolean;
   heading?: number; // Radians for visual mesh rotation
+
+  // Points of Interest (Step 5: keys, stairs, loot, enemies)
+  poiType?: 'loot' | 'key' | 'stairs' | 'enemy';
+  isActive?: boolean; // True if the POI hasn't been looted/used yet
 }

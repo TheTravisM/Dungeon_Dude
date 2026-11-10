@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { RigidBody, type RapierRigidBody } from '@react-three/rapier';
+import { RigidBody, useRapier, type RapierRigidBody } from '@react-three/rapier';
 import { damp, damp3, dampAngle } from 'maath/easing';
 import * as THREE from 'three';
 import type { Vector3Tuple } from 'three';
@@ -23,6 +23,18 @@ const SPEED = 5;
 /** Walk-cycle bob frequency (radians/second) and amplitude (world units). */
 const WALK_FREQUENCY = 10;
 const WALK_AMPLITUDE = 0.05;
+/**
+ * Squash-and-stretch walk cycle (05-06-01): the scale amplitudes. Shares the
+ * bob's phase (WALK_FREQUENCY) so the hero stretches tall while rising and
+ * squashes while dipping; the scale damps back to [1,1,1] when idle.
+ */
+const WALK_SQUASH_XZ = 0.05;
+const WALK_SQUASH_Y = 0.1;
+/**
+ * Character-controller offset: the small stability gap Rapier keeps between
+ * the hero's collider and its surroundings.
+ */
+const CHARACTER_CONTROLLER_OFFSET = 0.05;
 /**
  * Initial heading: the three-quarter view facing the fixed isometric camera,
  * using the model's local -Z forward convention.
@@ -58,6 +70,24 @@ export default function Hero({ position }: HeroProps) {
   const entityRef = useRef<Entity | null>(null);
   const { sample } = usePlayerInput();
 
+  // Kinematic character controller: created once per physics world so it
+  // persists across frames. The offset is a small stability gap, and
+  // autostep stays disabled so the hero cannot climb the diorama walls.
+  // (Renamed from the contract's `world` to avoid the ECS `world` import.)
+  const { world: physicsWorld } = useRapier();
+  const characterController = useMemo(() => {
+    const cc = physicsWorld.createCharacterController(
+      CHARACTER_CONTROLLER_OFFSET
+    );
+    cc.disableAutostep();
+    return cc;
+  }, [physicsWorld]);
+
+  // Release the WASM handle when the world or this component goes away.
+  useEffect(() => {
+    return () => physicsWorld.removeCharacterController(characterController);
+  }, [physicsWorld, characterController]);
+
   // Auto-pilot: the layout is cached per seed, so deriving it here is free.
   // The tree and its blackboard are created once per layout; a depth change
   // rebuilds both.
@@ -65,8 +95,8 @@ export default function Hero({ position }: HeroProps) {
   const layout = useMemo(() => getDungeonLayout(currentDepth), [currentDepth]);
   const navGraph = useMemo(() => buildNavGraph(layout), [layout]);
   const ai = useMemo(
-    () => createHeroTree(navGraph, layout.floorCells),
-    [navGraph, layout.floorCells]
+    () => createHeroTree(navGraph, layout.floorCells, world, layout.seed),
+    [navGraph, layout.floorCells, layout.seed]
   );
 
   // Register the hero in the ECS world for the lifetime of the component.
@@ -106,11 +136,18 @@ export default function Hero({ position }: HeroProps) {
 
     if (moveDir) {
       const move = scratchMove.copy(moveDir).multiplyScalar(SPEED * delta);
-      body.setNextKinematicTranslation({
-        x: pos.x + move.x,
-        y: pos.y,
-        z: pos.z + move.z,
-      });
+      const collider = body.collider(0);
+      if (collider) {
+        // Compute safe movement: the character controller slides the hero
+        // along walls instead of clipping through them.
+        characterController.computeColliderMovement(collider, move);
+        const corrected = characterController.computedMovement();
+        body.setNextKinematicTranslation({
+          x: pos.x + corrected.x,
+          y: pos.y + corrected.y,
+          z: pos.z + corrected.z,
+        });
+      }
     }
 
     // 2. Face the movement direction (shortest path), hold it when idle.
@@ -121,12 +158,29 @@ export default function Hero({ position }: HeroProps) {
     if (visualRef.current) visualRef.current.rotation.y = headingRef.current.y;
     if (torchRef.current) torchRef.current.rotation.y = headingRef.current.y;
 
-    // 3. Walk cycle: bob the visual group only, never the torch light.
+    // 3. Walk cycle: bob and squash-and-stretch the visual group only,
+    //    never the torch light. One shared phase keeps the two in sync: the
+    //    hero stretches tall while rising and squashes while dipping.
     if (visualRef.current) {
-      const bobTarget = moveDir
-        ? Math.sin(state.clock.elapsedTime * WALK_FREQUENCY) * WALK_AMPLITUDE
-        : 0;
-      damp(visualRef.current.position, 'y', bobTarget, 0.1, delta);
+      if (moveDir) {
+        const walkCycle = Math.sin(state.clock.elapsedTime * WALK_FREQUENCY);
+        damp(
+          visualRef.current.position,
+          'y',
+          walkCycle * WALK_AMPLITUDE,
+          0.1,
+          delta
+        );
+        visualRef.current.scale.set(
+          1 - walkCycle * WALK_SQUASH_XZ, // Squash X
+          1 + walkCycle * WALK_SQUASH_Y, // Stretch Y
+          1 - walkCycle * WALK_SQUASH_XZ // Squash Z
+        );
+      } else {
+        damp(visualRef.current.position, 'y', 0, 0.1, delta);
+        // Smoothly return to resting scale when idle.
+        damp3(visualRef.current.scale, [1, 1, 1], 0.1, delta);
+      }
     }
 
     // 4. Camera follow, preserving the isometric angle.
