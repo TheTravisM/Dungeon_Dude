@@ -44,6 +44,13 @@ export function useTorchFlicker() {
     // intensity (identical relative depth: base +/- 15%).
     const flicker = Math.sin(time * 17) * 0.15 + Math.cos(time * 23) * 0.15;
 
+    // Force the aim point's world matrix before the renderer builds the beam.
+    // The target rotates with the torch anchor; without this refresh the
+    // spotlight can keep aiming at the spawn point and splash a bright disc
+    // onto the hero's back once he turns away.
+    const target = targetRef.current;
+    if (target) target.updateWorldMatrix(true, false);
+
     const light = lightRef.current;
     if (light) {
       light.intensity =
