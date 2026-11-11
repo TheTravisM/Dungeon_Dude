@@ -202,7 +202,7 @@ Status legend: `[ ]` open, `[x]` done.
 ### T11. Commit the in-flight working-tree changes
 
 - **Priority:** P1 (hygiene; blocks clean per-task commits)
-- **Status:** [ ]
+- **Status:** [x]
 - **Files:** (working tree — no code change)
 - **Current behavior:** Uncommitted changes exist: `AI_HANDOFF.md`, `src/components/hero/Hero.tsx`, `src/components/hero/TorchLight.tsx`, `src/components/hero/useTorchFlicker.ts` (camera look-ahead + torch tweaks), plus untracked `CODE_REVIEW.md`.
 - **Expected behavior:** A clean working tree before task work begins.
@@ -335,7 +335,7 @@ The previous report flagged these; they were checked against the code and are co
 
 ## 7. Completion log
 
-(empty — append one dated line per approved task, e.g. `2026-11-10 — T1 done: removed /vite.svg link, no 404s in dev`)
+2026-11-10 — T11 done: committed in-flight camera look-ahead + torch polish (70679c0) and the code review work order (f37eaa2); working tree clean.
 
 ---
 
