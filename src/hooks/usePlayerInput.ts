@@ -23,7 +23,7 @@ import { useGameStore } from '../game/store';
 const GAMEPAD_DEADZONE = 0.2;
 
 /** Milliseconds without input before the game switches into auto mode. */
-const IDLE_TIMEOUT_MS = 10000;
+const IDLE_TIMEOUT_MS = 4000;
 
 /**
  * Module level on purpose: it must survive re-renders and stay out of the

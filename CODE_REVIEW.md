@@ -112,7 +112,7 @@ Status legend: `[ ]` open, `[x]` done.
 ### T3. Idle timeout mismatch: README says 4 seconds, code says 10
 
 - **Priority:** P1 (behavior vs documented contract)
-- **Status:** [ ]
+- **Status:** [x]
 - **Files:** `src/hooks/usePlayerInput.ts` (line 26: `IDLE_TIMEOUT_MS = 10000`), `README.md` ("go idle for four seconds and the AI takes right back")
 - **Current behavior:** The hero flips back to auto mode after 10,000 ms without input; the README documents 4 seconds.
 - **Expected behavior:** One value, code and docs agreeing.
@@ -338,6 +338,7 @@ The previous report flagged these; they were checked against the code and are co
 2026-11-10 — T11 done: committed in-flight camera look-ahead + torch polish (70679c0) and the code review work order (f37eaa2); working tree clean.
 2026-11-10 — T1 done: removed the /vite.svg link from index.html and replaced the manifest's /vite.svg icon entry with the android-chrome PNGs (approved scope extension); build passes, no vite.svg references remain.
 2026-11-10 — T4 done: "test" script changed to "vitest run"; npm test runs the suite once and exits 0 (11/11).
+2026-11-10 — T3 done: IDLE_TIMEOUT_MS set to 4000 (user chose the README value); tsc/lint/vitest all pass.
 
 ---
 
