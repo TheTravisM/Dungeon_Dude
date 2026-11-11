@@ -87,11 +87,11 @@ Status legend: `[ ]` open, `[x]` done.
 ### T1. Remove broken `/vite.svg` icon reference (404 on every page load)
 
 - **Priority:** P1 (user-visible console error; project contract is zero console errors)
-- **Status:** [ ]
-- **Files:** `index.html` (line 5)
+- **Status:** [x]
+- **Files:** `index.html` (line 5), `public/manifest.json` (line 12)
 - **Current behavior:** `<link rel="icon" type="image/svg+xml" href="/vite.svg" />` points at `/vite.svg`, but `public/` contains no `vite.svg` (only favicon.ico, favicon-16x16.png, favicon-32x32.png, android-chrome-*, apple-touch-icon.png, manifest.json, og-image.png). The browser 404s on every load.
 - **Expected behavior:** No 404s; the favicon keeps working via the existing `.ico`/PNG entries.
-- **Fix:** Delete line 5 of `index.html` (the `vite.svg` link). Do not touch the other icon links.
+- **Fix:** Delete line 5 of `index.html` (the `vite.svg` link). Do not touch the other icon links. Also replace the single `/vite.svg` icon entry in `public/manifest.json` with the existing `android-chrome-192x192.png` and `android-chrome-512x512.png` entries (scope extension approved during execution).
 - **Verify:** `npm run dev`; open the app; DevTools Network tab shows no 404s; Console is empty. `npm run build` still passes.
 - **Notes:** If the user wants a real SVG favicon instead, that is a separate asset task — ask first.
 
@@ -336,6 +336,7 @@ The previous report flagged these; they were checked against the code and are co
 ## 7. Completion log
 
 2026-11-10 — T11 done: committed in-flight camera look-ahead + torch polish (70679c0) and the code review work order (f37eaa2); working tree clean.
+2026-11-10 — T1 done: removed the /vite.svg link from index.html and replaced the manifest's /vite.svg icon entry with the android-chrome PNGs (approved scope extension); build passes, no vite.svg references remain.
 
 ---
 
