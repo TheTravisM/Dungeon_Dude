@@ -190,14 +190,14 @@ Do not start feature implementation until the baseline check is understood and a
 | [x] | 5.02 | Hero visual model |
 | [x] | 5.03 | Torch light, flame, and embers |
 | [x] | 5.04 | Input module and manual-control clock |
-| [ ] | 5.05 | Character-controller movement |
-| [ ] | 5.06 | Facing, walk cycle, and torch sway |
-| [ ] | 5.07 | Camera follow |
-| [ ] | 5.08 | Navigation grid and path planning |
-| [ ] | 5.09 | Path smoothing |
-| [ ] | 5.10 | Path debug overlay |
-| [ ] | 5.11 | Explore goals and stuck detector |
-| [ ] | 5.12 | Waypoint following and mode arbitration |
+| [x] | 5.05 | Character-controller movement |
+| [x] | 5.06 | Facing, walk cycle, and torch sway |
+| [x] | 5.07 | Camera follow |
+| [x] | 5.08 | Navigation grid and path planning |
+| [x] | 5.09 | Path smoothing |
+| [x] | 5.10 | Path debug overlay |
+| [x] | 5.11 | Explore goals and stuck detector |
+| [x] | 5.12 | Waypoint following and mode arbitration |
 | [ ] | 5.13 | Behavior-tree brain and autonomous exploration |
 | [ ] | 5.14 | Step 5 integration and acceptance |
 

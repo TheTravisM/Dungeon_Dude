@@ -7,6 +7,7 @@ const startingLevel =
 
 /** The environment provides the initial state; the runtime toggle overrides it later. */
 const initialPhysicsDebug = import.meta.env.VITE_DEBUG_PHYSICS === 'true';
+const initialPathDebug = import.meta.env.VITE_DEBUG_PATH === 'true';
 
 /**
  * UI and aggregate game state only. Positions, rotations, velocities, and
@@ -26,6 +27,7 @@ export const useGameStore = create<GameState>()((set) => ({
   hasKey: false,
   debugPanelOpen: false,
   physicsDebug: initialPhysicsDebug,
+  pathDebug: initialPathDebug,
 
   setAutoPlaying: (isAuto) => set({ autoPlaying: isAuto }),
 
@@ -50,4 +52,6 @@ export const useGameStore = create<GameState>()((set) => ({
   toggleDebugPanel: () => set((state) => ({ debugPanelOpen: !state.debugPanelOpen })),
 
   togglePhysicsDebug: () => set((state) => ({ physicsDebug: !state.physicsDebug })),
+
+  togglePathDebug: () => set((state) => ({ pathDebug: !state.pathDebug })),
 }));

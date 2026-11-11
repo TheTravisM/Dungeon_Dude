@@ -21,6 +21,7 @@ export interface GameState {
   hasKey: boolean;
   debugPanelOpen: boolean;
   physicsDebug: boolean;
+  pathDebug: boolean;
   setAutoPlaying: (isAuto: boolean) => void;
   updateLastInputTime: () => void;
   incrementGold: (amount: number) => void;
@@ -29,6 +30,7 @@ export interface GameState {
   descendToNextLevel: () => void;
   toggleDebugPanel: () => void;
   togglePhysicsDebug: () => void;
+  togglePathDebug: () => void;
 }
 
 // Dungeon grid coordinates. Cells are zero-indexed from the grid corner.

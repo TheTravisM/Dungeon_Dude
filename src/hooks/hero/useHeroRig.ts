@@ -1,4 +1,4 @@
-import { useRef, type RefObject } from 'react';
+import { createRef, useRef, type RefObject } from 'react';
 import type { Group } from 'three';
 
 /**
@@ -21,18 +21,29 @@ export interface HeroRig {
 /**
  * Creates the hero's group refs once per component instance. No logic lives
  * here so the visual model stays purely declarative.
+ *
+ * The rig object is built with `createRef` behind one unconditional `useRef`.
+ * Returning an object literal full of `useRef` calls lets the React Compiler
+ * memoize the object and skip those hooks on later renders, which breaks the
+ * Rules of Hooks. Only the single `useRef` below is a hook.
  */
 export function useHeroRig(): HeroRig {
-  return {
-    root: useRef<Group>(null),
-    hips: useRef<Group>(null),
-    torso: useRef<Group>(null),
-    cloak: useRef<Group>(null),
-    head: useRef<Group>(null),
-    legLeft: useRef<Group>(null),
-    legRight: useRef<Group>(null),
-    armSword: useRef<Group>(null),
-    armTorch: useRef<Group>(null),
-    torchHand: useRef<Group>(null),
-  };
+  const rigRef = useRef<HeroRig | null>(null);
+
+  if (rigRef.current === null) {
+    rigRef.current = {
+      root: createRef<Group>(),
+      hips: createRef<Group>(),
+      torso: createRef<Group>(),
+      cloak: createRef<Group>(),
+      head: createRef<Group>(),
+      legLeft: createRef<Group>(),
+      legRight: createRef<Group>(),
+      armSword: createRef<Group>(),
+      armTorch: createRef<Group>(),
+      torchHand: createRef<Group>(),
+    };
+  }
+
+  return rigRef.current;
 }

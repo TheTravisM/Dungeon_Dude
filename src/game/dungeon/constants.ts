@@ -78,3 +78,8 @@ export const FLOOR_COLLIDER_THICKNESS = 0.4;
 export function gridToWorld(coordinate: number, size: number = DUNGEON_SIZE): number {
   return coordinate - (size - 1) / 2;
 }
+
+/** Converts a world coordinate back to its containing zero-indexed grid cell. */
+export function worldToGrid(coordinate: number, size: number = DUNGEON_SIZE): number {
+  return Math.round(coordinate + (size - 1) / 2);
+}

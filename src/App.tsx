@@ -4,11 +4,17 @@ import { Canvas } from '@react-three/fiber';
 import DebugOverlay from './components/debug/DebugOverlay';
 import DungeonStats from './components/debug/DungeonStats';
 import HeroDebugReadout from './components/debug/HeroDebugReadout';
+import PathDebug from './components/debug/PathDebug';
 import Dungeon from './components/dungeon/Dungeon';
 import Effects from './components/Effects';
 import Hero from './components/hero/Hero';
 import InputBridge from './components/hero/InputBridge';
 import GamePhysics from './components/physics/GamePhysics';
+import CameraFollow from './components/scene/CameraFollow';
+import {
+  CAMERA_OFFSET,
+  CAMERA_ZOOM,
+} from './components/scene/cameraConstants';
 import IsometricCamera from './components/scene/IsometricCamera';
 import Lighting from './components/scene/Lighting';
 import { getDungeonLayout } from './game/dungeon/getDungeonLayout';
@@ -50,10 +56,11 @@ export default function App() {
             shadows="percentage"
             dpr={[1, 2]}
             orthographic
-            camera={{ position: [20, 20, 20], zoom: 40, near: 0.1, far: 200 }}
+            camera={{ position: CAMERA_OFFSET, zoom: CAMERA_ZOOM, near: 0.1, far: 200 }}
           >
             <color attach="background" args={['#0b0e14']} />
             <IsometricCamera />
+            <CameraFollow />
             <Lighting />
             <GamePhysics>
               <Dungeon layout={layout} />
@@ -61,6 +68,7 @@ export default function App() {
               <InputBridge />
             </GamePhysics>
             <Effects />
+            {import.meta.env.DEV && <PathDebug layout={layout} />}
             <DungeonStats visible={statsVisible} />
             {import.meta.env.DEV && <HeroDebugReadout />}
           </Canvas>

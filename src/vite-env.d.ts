@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_DEBUG_PHYSICS?: string;
+  readonly VITE_DEBUG_PATH?: string;
   readonly VITE_STARTING_LEVEL?: string;
   readonly VITE_DUNGEON_SEED?: string;
 }

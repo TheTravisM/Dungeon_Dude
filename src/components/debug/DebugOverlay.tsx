@@ -23,8 +23,10 @@ export default function DebugOverlay({
 }: DebugOverlayProps) {
   const debugPanelOpen = useGameStore((state) => state.debugPanelOpen);
   const physicsDebug = useGameStore((state) => state.physicsDebug);
+  const pathDebug = useGameStore((state) => state.pathDebug);
   const toggleDebugPanel = useGameStore((state) => state.toggleDebugPanel);
   const togglePhysicsDebug = useGameStore((state) => state.togglePhysicsDebug);
+  const togglePathDebug = useGameStore((state) => state.togglePathDebug);
 
   if (!import.meta.env.DEV) return null;
 
@@ -74,6 +76,20 @@ export default function DebugOverlay({
           />
           <span>Physics colliders</span>
         </label>
+
+        <label className={styles.toggle}>
+          <input
+            type="checkbox"
+            checked={pathDebug}
+            onChange={togglePathDebug}
+          />
+          <span>Path overlay</span>
+        </label>
+
+        <p className={styles.hint}>
+          DEV TOOL: with the path overlay on, click the floor to plan a route
+          from the hero.
+        </p>
 
         <p className={styles.hint}>
           Set VITE_DUNGEON_SEED before starting Vite to pin a different layout.
