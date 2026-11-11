@@ -20,29 +20,3 @@
   padding: clamp(0.75rem, 2vw, 1.5rem);
   pointer-events: none;
 }
-
-.badge {
-  @include glass-panel;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  padding: 0.75rem 1rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-}
-
-.badgeTitle {
-  font-size: clamp(0.75rem, 1.4vw, 0.95rem);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-torch-fire);
-}
-
-.badgeStep {
-  font-size: clamp(0.55rem, 1vw, 0.7rem);
-  color: rgba(255, 255, 255, 0.65);
-}
-
-.badgeMeta {
-  font-size: clamp(0.5rem, 0.9vw, 0.62rem);
-  color: rgba(255, 255, 255, 0.45);
-}

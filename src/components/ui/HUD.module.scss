@@ -1,0 +1,104 @@
+.hud {
+  @include glass-panel;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: clamp(0.75rem, 2vw, 1.5rem);
+  width: clamp(12rem, 22vw, 16rem);
+  max-width: 100%;
+  padding: clamp(0.6rem, 1.6vw, 0.9rem) clamp(0.8rem, 2vw, 1.2rem);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  container-type: inline-size;
+  pointer-events: none;
+}
+
+.health {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: clamp(0.4rem, 1.6cqw, 0.7rem);
+}
+
+.label {
+  font-size: clamp(0.45rem, 1.3cqw, 0.6rem);
+  line-height: 1.5;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.hearts {
+  display: flex;
+  gap: clamp(2px, 0.6cqw, 4px);
+}
+
+.heart {
+  position: relative;
+  width: clamp(10px, 3cqw, 15px);
+  aspect-ratio: 6 / 5;
+  background: rgba(255, 255, 255, 0.16);
+  clip-path: polygon(
+    50% 100%,
+    3% 52%,
+    0% 32%,
+    2% 16%,
+    12% 4%,
+    27% 0%,
+    39% 3%,
+    50% 15%,
+    61% 3%,
+    73% 0%,
+    88% 4%,
+    98% 16%,
+    100% 32%,
+    97% 52%
+  );
+}
+
+.heartFill {
+  position: absolute;
+  inset: 0;
+  width: 0;
+  background: var(--color-blood-red);
+  transition: width 140ms ease-out;
+}
+
+.healthValue {
+  font-size: clamp(0.55rem, 1.9cqw, 0.8rem);
+  line-height: 1.5;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.fallen {
+  font-size: clamp(0.5rem, 1.6cqw, 0.7rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-blood-red);
+}
+
+.stats {
+  display: flex;
+  gap: clamp(0.7rem, 2.6cqw, 1.2rem);
+  margin: 0;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.value {
+  margin: 0;
+  font-size: clamp(0.6rem, 2cqw, 0.85rem);
+  line-height: 1.5;
+  color: var(--color-torch-fire);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heartFill {
+    transition: none;
+  }
+}

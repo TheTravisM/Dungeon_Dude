@@ -8,6 +8,7 @@ import PathDebug from './components/debug/PathDebug';
 import Dungeon from './components/dungeon/Dungeon';
 import Effects from './components/Effects';
 import Hero from './components/hero/Hero';
+import HeroVitalsBridge from './components/hero/HeroVitalsBridge';
 import InputBridge from './components/hero/InputBridge';
 import LevelEntities from './components/level/LevelEntities';
 import GamePhysics from './components/physics/GamePhysics';
@@ -19,6 +20,7 @@ import {
 import IsometricCamera from './components/scene/IsometricCamera';
 import Lighting from './components/scene/Lighting';
 import MainMenu from './components/ui/MainMenu';
+import HUD from './components/ui/HUD';
 import { getDungeonLayout } from './game/dungeon/getDungeonLayout';
 import { useGameStore } from './game/store';
 import { useScreenStore } from './game/ui/screenStore';
@@ -72,6 +74,7 @@ export default function App() {
                 <Hero key={layout.seed} layout={layout} />
                 <LevelEntities layout={layout} />
                 <InputBridge />
+                <HeroVitalsBridge />
               </GamePhysics>
               <Effects />
               {import.meta.env.DEV && <PathDebug layout={layout} />}
@@ -86,13 +89,7 @@ export default function App() {
         {screen === 'mainMenu' && <MainMenu />}
         {screen === 'playing' && (
           <>
-            <div className={styles.badge}>
-              <span className={styles.badgeTitle}>Dungeon Dude</span>
-              <span className={styles.badgeStep}>Step 6 - Monsters and Combat</span>
-              <span className={styles.badgeMeta}>
-                Depth {currentDepth} / Seed {layout.seed}
-              </span>
-            </div>
+            <HUD />
             <DebugOverlay
               depth={currentDepth}
               layout={layout}

@@ -1,5 +1,5 @@
-import { useLayoutEffect, useRef } from 'react';
-import type { InstancedMesh } from 'three';
+import { useLayoutEffect, useMemo, useRef } from 'react';
+import type { InstancedMesh, Texture } from 'three';
 import type { DungeonLayout } from '../../types';
 import {
   WALL_HEIGHT_LOW,
@@ -7,6 +7,10 @@ import {
   WALL_THICKNESS,
 } from '../../game/dungeon/constants';
 import { getWallInstanceData } from '../../game/dungeon/wallInstances';
+import {
+  createProceduralBumpTexture,
+  createProceduralStoneTexture,
+} from '../../game/textures';
 
 interface DungeonWallsProps {
   layout: DungeonLayout;
@@ -16,15 +20,17 @@ interface WallBatchProps {
   matrices: Float32Array;
   count: number;
   height: number;
-  color: string;
+  map: Texture | null;
+  bumpMap: Texture | null;
 }
 
 /**
  * One instanced draw call for a height category. The geometry owns the wall
  * height, so an instance transform only places the cell; that keeps the stone
- * pattern consistent instead of stretching it across merged runs.
+ * pattern consistent instead of stretching it across merged runs. Both batches
+ * share the same procedural textures, so the canvas generation runs once.
  */
-function WallBatch({ matrices, count, height, color }: WallBatchProps) {
+function WallBatch({ matrices, count, height, map, bumpMap }: WallBatchProps) {
   const meshRef = useRef<InstancedMesh>(null);
 
   useLayoutEffect(() => {
@@ -43,7 +49,13 @@ function WallBatch({ matrices, count, height, color }: WallBatchProps) {
   return (
     <instancedMesh ref={meshRef} args={[undefined, undefined, count]} castShadow receiveShadow>
       <boxGeometry args={[WALL_THICKNESS, height, WALL_THICKNESS]} />
-      <meshStandardMaterial color={color} roughness={0.92} metalness={0.04} />
+      <meshStandardMaterial
+        map={map ?? undefined}
+        bumpMap={bumpMap ?? undefined}
+        bumpScale={0.04}
+        roughness={0.55}
+        metalness={0.04}
+      />
     </instancedMesh>
   );
 }
@@ -56,19 +68,31 @@ function WallBatch({ matrices, count, height, color }: WallBatchProps) {
 export default function DungeonWalls({ layout }: DungeonWallsProps) {
   const instances = getWallInstanceData(layout);
 
+  // Textures are generated in canvas once per mount and reused by both wall
+  // batches. useMemo prevents any regeneration during React re-renders.
+  const textures = useMemo(
+    () => ({
+      stone: createProceduralStoneTexture(),
+      bump: createProceduralBumpTexture(),
+    }),
+    []
+  );
+
   return (
     <group>
       <WallBatch
         matrices={instances.tall}
         count={instances.tallCount}
         height={WALL_HEIGHT_TALL}
-        color="#3a4150"
+        map={textures.stone}
+        bumpMap={textures.bump}
       />
       <WallBatch
         matrices={instances.low}
         count={instances.lowCount}
         height={WALL_HEIGHT_LOW}
-        color="#4b5568"
+        map={textures.stone}
+        bumpMap={textures.bump}
       />
     </group>
   );
