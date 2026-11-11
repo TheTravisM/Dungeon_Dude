@@ -15,11 +15,13 @@ import { resolveHeroDirection } from '../../game/hero/intent';
 import { useHeroEntity } from '../../hooks/hero/useHeroEntity';
 import { useHeroAnimation } from '../../hooks/hero/useHeroAnimation';
 import { useHeroAttack } from '../../hooks/hero/useHeroAttack';
+import { useHeroBlink } from '../../hooks/hero/useHeroBlink';
 import { useHeroBrain } from '../../hooks/hero/useHeroBrain';
 import { useHeroMovement } from '../../hooks/hero/useHeroMovement';
 import { useHeroRig } from '../../hooks/hero/useHeroRig';
 import type { DungeonLayout } from '../../types';
 import HeroModel from './HeroModel';
+import SwordSensor from './SwordSensor';
 
 interface HeroProps {
   layout: DungeonLayout;
@@ -56,6 +58,7 @@ export default function Hero({ layout }: HeroProps) {
   // never one frame behind the phase transition.
   useHeroAttack();
   useHeroAnimation(rig);
+  useHeroBlink(rig);
   useHeroBrain(layout);
 
   const bodyRef = useRef<RapierRigidBody>(null);
@@ -78,6 +81,7 @@ export default function Hero({ layout }: HeroProps) {
         position={[0, HERO_CAPSULE_CENTER_Y, 0]}
       />
       <HeroModel rig={rig} />
+      <SwordSensor rig={rig} />
     </RigidBody>
   );
 }

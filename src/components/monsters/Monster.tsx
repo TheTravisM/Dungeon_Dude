@@ -3,6 +3,7 @@ import {
   BoxGeometry,
   CircleGeometry,
   MeshStandardMaterial,
+  type Color,
   type Group,
 } from 'three';
 import type { MonsterArchetypeId } from '../../types';
@@ -10,8 +11,10 @@ import { MONSTER_ARCHETYPES } from '../../game/monsters/archetypes';
 import { MONSTER_PARTS } from '../../game/monsters/monsterParts';
 
 export interface MonsterRig {
-  visual: Group;                       // bob / heading / squash target (later tasks)
-  materials: MeshStandardMaterial[];   // for hit flash (later tasks)
+  visual: Group;                       // bob / heading / squash target
+  materials: MeshStandardMaterial[];   // hit flash and telegraph targets
+  baseEmissive: Color[];               // emissive restored when feedback ends
+  baseEmissiveIntensity: number[];     // intensity restored with the color
 }
 
 interface MonsterProps {
@@ -67,12 +70,19 @@ export default function Monster({ archetype, rigRef }: MonsterProps) {
 
   useImperativeHandle(
     rigRef,
-    () => ({
-      get visual() {
-        return visualRef.current!;
-      },
-      materials: [...materials.values()],
-    }),
+    () => {
+      const owned = [...materials.values()];
+      return {
+        get visual() {
+          return visualRef.current!;
+        },
+        materials: owned,
+        baseEmissive: owned.map((material) => material.emissive.clone()),
+        baseEmissiveIntensity: owned.map(
+          (material) => material.emissiveIntensity
+        ),
+      };
+    },
     [materials]
   );
 

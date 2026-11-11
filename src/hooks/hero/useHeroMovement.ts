@@ -26,10 +26,14 @@ interface CharacterController {
   setApplyImpulsesToDynamicBodies(enabled: boolean): void;
   computeColliderMovement(
     collider: RapierCollider,
-    desiredTranslation: { x: number; y: number; z: number }
+    desiredTranslation: { x: number; y: number; z: number },
+    filterFlags?: number
   ): void;
   computedMovement(): { x: number; y: number; z: number };
 }
+
+/** QueryFilterFlags.EXCLUDE_SENSORS; the hero's sword sensor must never block it. */
+const EXCLUDE_SENSORS = 8;
 
 /** Reused per step so the movement callback does not churn fresh objects. */
 const scratchDelta = { x: 0, y: 0, z: 0 };
@@ -107,7 +111,7 @@ export function useHeroMovement(
     scratchDelta.y = 0;
     scratchDelta.z = dir.z * HERO_SPEED * PHYSICS_TIME_STEP;
 
-    controller.computeColliderMovement(collider, scratchDelta);
+    controller.computeColliderMovement(collider, scratchDelta, EXCLUDE_SENSORS);
     const movement = controller.computedMovement();
     const current = body.translation();
 

@@ -2,6 +2,8 @@ import { useRef, type CSSProperties } from 'react';
 import { Html } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { inputState, manualWindowMsLeft } from '../../game/hero/input/inputState';
+import { hitStats } from '../../game/combat/hitEvents';
+import { heroQuery } from '../../game/ecs';
 
 const READOUT_STYLE: CSSProperties = {
   position: 'fixed',
@@ -34,10 +36,13 @@ export default function HeroDebugReadout() {
       : 0;
     const mode = inputState.manualActive ? 'MANUAL' : 'AUTO';
     const { x, y } = inputState.axes;
+    const hero = heroQuery.first;
 
     element.textContent =
       `${mode} | axes ${x.toFixed(2)}, ${y.toFixed(2)}` +
       ` | attack ${inputState.attack ? 'on' : 'off'}` +
+      ` | hp: ${hero?.health ?? 0}/${hero?.maxHealth ?? 0}` +
+      ` | hits: ${hitStats.total}  last: ${hitStats.lastTargetId || '-'}` +
       ` | ${remaining} ms left`;
   });
 

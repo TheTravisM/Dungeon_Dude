@@ -51,3 +51,8 @@ export const HERO_ATTACK_REACH = 1.15;
 export const HERO_ENGAGE_RANGE = 2.6;
 /** How long a combat intent stays valid without a refresh. */
 export const HERO_COMBAT_HOLD_MS = 300;
+
+/** Sword sensor center in front of the hero, in world units. */
+export const HERO_SWORD_OFFSET = 0.5;
+/** Sword sensor radius; the far edge reaches about 1.1 units in front. */
+export const HERO_SWORD_RADIUS = 0.6;

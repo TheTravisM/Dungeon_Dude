@@ -11,9 +11,12 @@ import { createWalkGrid } from '../../game/hero/navigation/walkGrid';
 import { HERO_GROUND_CLEARANCE } from '../../game/hero/constants';
 import { MONSTER_ARCHETYPES } from '../../game/monsters/archetypes';
 import { createMonsterBrain } from '../../game/monsters/ai/monsterBrain';
+import { swordTracker } from '../../game/hero/combat/swordHits';
 import { hashMonsterId } from '../../game/monsters/monsterHash';
 import { registerMonster, unregisterMonster } from '../../game/monsters/monsterRegistry';
 import Monster, { type MonsterRig } from './Monster';
+import MonsterHealthBar from './MonsterHealthBar';
+import { useMonsterFeedback } from './useMonsterFeedback';
 
 interface MonsterActorProps {
   entity: Entity;
@@ -51,12 +54,17 @@ export default function MonsterActor({ entity }: MonsterActorProps) {
     );
   }, [entity, layout]);
 
+  const telegraph = useMonsterFeedback(entity, rigRef);
+
   useEffect(() => {
     const body = bodyRef.current;
     const collider = colliderRef.current;
     if (!body || !collider) return;
     registerMonster({ entity, body, collider, brain, rig: rigRef.current });
-    return () => unregisterMonster(entity.id);
+    return () => {
+      unregisterMonster(entity.id);
+      swordTracker.exit(entity.id);
+    };
   }, [entity, brain]);
 
   useFrame((state, delta) => {
@@ -78,7 +86,10 @@ export default function MonsterActor({ entity }: MonsterActorProps) {
 
     const squash =
       moving && entity.archetype === 'slime' ? 1 + 0.06 * Math.sin(t * 9) : 1;
-    easing.damp(rig.visual.scale, 'y', squash, 0.1, delta);
+    const swell = 1 + 0.12 * telegraph.current;
+    easing.damp(rig.visual.scale, 'x', swell, 0.1, delta);
+    easing.damp(rig.visual.scale, 'y', squash * swell, 0.1, delta);
+    easing.damp(rig.visual.scale, 'z', swell, 0.1, delta);
   });
 
   const halfHeight = Math.max(0.01, (stats.height - 2 * stats.radius) / 2);
@@ -93,6 +104,7 @@ export default function MonsterActor({ entity }: MonsterActorProps) {
     <RigidBody ref={bodyRef} type="kinematicPosition" colliders={false} canSleep={false} lockRotations position={position}>
       <CapsuleCollider ref={colliderRef} args={[halfHeight, stats.radius]} position={[0, centerY, 0]} />
       <Monster archetype={entity.archetype!} rigRef={rigRef} />
+      <MonsterHealthBar entity={entity} />
       {import.meta.env.DEV && pathDebug && (
         <Html position={[0, stats.height + 0.25, 0]} center style={{ pointerEvents: 'none', fontSize: 10 }}>
           <span ref={statusRef}>{entity.state}</span>

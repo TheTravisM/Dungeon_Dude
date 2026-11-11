@@ -7,6 +7,11 @@ import {
 } from '@react-three/rapier';
 import { PHYSICS_TIME_STEP } from '../../game/constants';
 import { FLOOR_TOP } from '../../game/dungeon/constants';
+import {
+  KNOCKBACK_MS,
+  KNOCKBACK_SPEED,
+} from '../../game/combat/constants';
+import { knockbackFactor } from '../../game/combat/knockback';
 import { HERO_CONTROLLER_OFFSET } from '../../game/hero/constants';
 import { MONSTER_ARCHETYPES } from '../../game/monsters/archetypes';
 import { hashMonsterId } from '../../game/monsters/monsterHash';
@@ -16,8 +21,8 @@ import {
   type RegisteredMonster,
 } from '../../game/monsters/monsterRegistry';
 
-/** QueryFilterFlags.EXCLUDE_KINEMATIC; keeps monsters from colliding with each other and the hero. */
-const EXCLUDE_KINEMATIC = 2;
+/** QueryFilterFlags.EXCLUDE_KINEMATIC | QueryFilterFlags.EXCLUDE_SENSORS. */
+const EXCLUDE_KINEMATIC_AND_SENSORS = 2 | 8;
 
 interface CharacterController {
   setSlideEnabled(enabled: boolean): void;
@@ -66,6 +71,7 @@ export default function MonsterSystem() {
 
     forEachMonster((monster) => {
       if (ticks >= 4) return;
+      if (monster.entity.state === 'dead') return;
       const id = monster.entity.id;
       const phase = hashMonsterId(id);
       let due = nextTick.current.get(id);
@@ -94,13 +100,34 @@ export default function MonsterSystem() {
     forEachMonster((monster: RegisteredMonster) => {
       if (monster.entity.state === 'dead') return;
       const stats = MONSTER_ARCHETYPES[monster.entity.archetype ?? 'slime'];
+      const staggered = now < (monster.entity.hurtUntil ?? 0);
 
-      monster.brain.desiredDirection(now, direction);
-      delta.x = direction.x * stats.moveSpeed * PHYSICS_TIME_STEP;
+      if (staggered) {
+        direction.x = 0;
+        direction.z = 0;
+      } else {
+        monster.brain.desiredDirection(now, direction);
+      }
+
+      const step = PHYSICS_TIME_STEP;
+      let moveX = direction.x * stats.moveSpeed * step;
+      let moveZ = direction.z * stats.moveSpeed * step;
+
+      const knock = knockbackFactor(now, monster.knockUntil, KNOCKBACK_MS);
+      if (knock > 0) {
+        moveX += monster.knockX * KNOCKBACK_SPEED * knock * step;
+        moveZ += monster.knockZ * KNOCKBACK_SPEED * knock * step;
+      }
+
+      delta.x = moveX;
       delta.y = 0;
-      delta.z = direction.z * stats.moveSpeed * PHYSICS_TIME_STEP;
+      delta.z = moveZ;
 
-      controller.computeColliderMovement(monster.collider, delta, EXCLUDE_KINEMATIC);
+      controller.computeColliderMovement(
+        monster.collider,
+        delta,
+        EXCLUDE_KINEMATIC_AND_SENSORS
+      );
       const movement = controller.computedMovement();
       const current = monster.body.translation();
 

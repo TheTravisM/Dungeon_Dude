@@ -211,8 +211,8 @@ Do not start feature implementation until the baseline check is understood and a
 | [x] | 6.04 | Spatial grid/hash proximity index |
 | [x] | 6.05 | Monster aggro and movement behavior |
 | [x] | 6.06 | Hero attack state and fight behavior |
-| [ ] | 6.07 | Damage resolution and readable combat feedback |
-| [ ] | 6.08 | Death handling, pooling, and cleanup |
+| [x] | 6.07 | Sword hit detection with a Rapier sensor |
+| [x] | 6.08 | Damage resolution and combat feedback |
 | [ ] | 6.09 | Step 6 integration and acceptance |
 
 ## 7. Step 7 — UI and View Transitions

@@ -1,4 +1,6 @@
 import type { DungeonLayout, Entity } from '../../types';
+import CombatSystem from '../combat/CombatSystem';
+import DamageNumbers from '../combat/DamageNumbers';
 import MonsterActor from '../monsters/MonsterActor';
 import MonsterSystem from '../monsters/MonsterSystem';
 import MonsterIndexSystem from './MonsterIndexSystem';
@@ -12,7 +14,8 @@ interface LevelEntitiesProps {
 
 /**
  * Level population: monster actor bodies, the shared monster physics system,
- * the proximity index, and the key/stairs markers.
+ * the proximity index, combat resolution, damage numbers, and the key/stairs
+ * markers.
  */
 export default function LevelEntities({ layout }: LevelEntitiesProps) {
   const depth = useGameStore((state) => state.currentDepth);
@@ -22,6 +25,8 @@ export default function LevelEntities({ layout }: LevelEntitiesProps) {
     <>
       <MonsterIndexSystem />
       <MonsterSystem />
+      <CombatSystem />
+      <DamageNumbers />
       {monsters.map((entity) => (
         <MonsterActor key={entity.id} entity={entity} />
       ))}
