@@ -171,7 +171,7 @@ Status legend: `[ ]` open, `[x]` done.
 ### T8. `usePlayerInput`: module-level idle timestamp → ref, and fix the lint warning
 
 - **Priority:** P2 (hygiene + testability; current code works)
-- **Status:** [ ]
+- **Status:** [x]
 - **Files:** `src/hooks/usePlayerInput.ts` (line 32 `let lastInputTime`, line 121 `useCallback` deps)
 - **Current behavior:** `lastInputTime` is a module-level `let` (intentional, per the comment, to survive re-renders and stay out of the store). It is shared across React roots/HMR reloads. Lint reports `useCallback has a missing dependency: 'state'` at line 121.
 - **Expected behavior:** The timestamp lives in a `useRef` (still survives re-renders, per-instance, StrictMode-safe) and lint is clean.
@@ -340,6 +340,7 @@ The previous report flagged these; they were checked against the code and are co
 2026-11-10 — T4 done: "test" script changed to "vitest run"; npm test runs the suite once and exits 0 (11/11).
 2026-11-10 — T3 done: IDLE_TIMEOUT_MS set to 4000 (user chose the README value); tsc/lint/vitest all pass.
 2026-11-10 — T2 done: self-hosted Press Start 2P latin woff2 in public/fonts with @font-face; removed the Google Fonts preconnects; CSP font-src now 'self' data: (user chose option A).
+2026-11-10 — T8 done: idle timestamp moved from module-level let into a useRef inside usePlayerInput; state added to the useCallback deps; lint is now 0 warnings.
 
 ---
 

@@ -15,8 +15,8 @@ import { useGameStore } from '../game/store';
  *
  * sample() also owns the manual/auto idle timer: any input keeps the game in
  * manual mode, and after IDLE_TIMEOUT_MS without input it flips back to auto
- * mode. The timestamp lives at module level on purpose, so per-frame sampling
- * never writes to the Zustand store; only the mode flip does.
+ * mode. The timestamp lives in a ref on purpose, so per-frame sampling never
+ * writes to the Zustand store; only the mode flip does.
  */
 
 /** Minimum stick deflection before a gamepad axis counts as input. */
@@ -24,12 +24,6 @@ const GAMEPAD_DEADZONE = 0.2;
 
 /** Milliseconds without input before the game switches into auto mode. */
 const IDLE_TIMEOUT_MS = 4000;
-
-/**
- * Module level on purpose: it must survive re-renders and stay out of the
- * Zustand store, which would otherwise be written on every input frame.
- */
-let lastInputTime = performance.now();
 
 function applyDeadzone(value: number): number {
   return Math.abs(value) < GAMEPAD_DEADZONE ? 0 : value;
@@ -71,6 +65,11 @@ export function usePlayerInput(): PlayerInput {
   }
   const state = stateRef.current;
 
+  // The idle timestamp lives in a ref: it must survive re-renders and stay
+  // out of the Zustand store, which would otherwise be written on every
+  // input frame.
+  const lastInputTimeRef = useRef(performance.now());
+
   const sample = useCallback((): PlayerInputState => {
     const keys = get();
 
@@ -111,14 +110,14 @@ export function usePlayerInput(): PlayerInput {
     // only written when the mode actually flips.
     const { isAutoMode: autoMode, setAutoMode } = useGameStore.getState();
     if (state.isManual) {
-      lastInputTime = performance.now();
+      lastInputTimeRef.current = performance.now();
       if (autoMode) setAutoMode(false);
-    } else if (!autoMode && performance.now() - lastInputTime > IDLE_TIMEOUT_MS) {
+    } else if (!autoMode && performance.now() - lastInputTimeRef.current > IDLE_TIMEOUT_MS) {
       setAutoMode(true);
     }
 
     return state;
-  }, [get]);
+  }, [get, state]);
 
   return {
     direction: state.direction,
