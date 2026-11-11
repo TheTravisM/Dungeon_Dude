@@ -98,11 +98,11 @@ Status legend: `[ ]` open, `[x]` done.
 ### T2. Pixel font is referenced but never loaded (CSP would block it)
 
 - **Priority:** P1 (visual: the whole UI renders in the fallback font)
-- **Status:** [ ]
+- **Status:** [x]
 - **Files:** `src/styles/_variables.scss` (line 11), `index.html` (lines 24–26), `src/styles/global.scss` (line 14)
 - **Current behavior:** `--font-pixel: 'Press Start 2P', system-ui, monospace;` is applied to `body`, but the font is never loaded: `index.html` preconnects to `fonts.googleapis.com`/`fonts.gstatic.com` without a stylesheet link, and the CSP (`style-src 'self' 'unsafe-inline'`) would block a Google Fonts CSS even if added. Result: everything renders in `system-ui`/`monospace`; the preconnects are dead weight.
 - **Expected behavior:** The pixel font actually renders, or the token is changed to a font that is present.
-- **Fix (decision needed — ask the user which option):**
+- **Fix (user chose Option A — self-host; executed):**
   - **Option A (recommended): self-host.** Download the 'Press Start 2P' woff2 (Google Fonts, OFL license), put it in `public/fonts/`, add an `@font-face` in `global.scss`, delete the two preconnect lines, tighten CSP `font-src` to `'self' data:`.
   - **Option B: load from Google Fonts.** Add `<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" crossorigin>` and extend CSP `style-src` with `https://fonts.googleapis.com` (font-src already allows `fonts.gstatic.com`).
   - **Option C: drop the pixel font.** Change `--font-pixel` to a monospace stack and delete the preconnects.
@@ -339,6 +339,7 @@ The previous report flagged these; they were checked against the code and are co
 2026-11-10 — T1 done: removed the /vite.svg link from index.html and replaced the manifest's /vite.svg icon entry with the android-chrome PNGs (approved scope extension); build passes, no vite.svg references remain.
 2026-11-10 — T4 done: "test" script changed to "vitest run"; npm test runs the suite once and exits 0 (11/11).
 2026-11-10 — T3 done: IDLE_TIMEOUT_MS set to 4000 (user chose the README value); tsc/lint/vitest all pass.
+2026-11-10 — T2 done: self-hosted Press Start 2P latin woff2 in public/fonts with @font-face; removed the Google Fonts preconnects; CSP font-src now 'self' data: (user chose option A).
 
 ---
 

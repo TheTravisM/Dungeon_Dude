@@ -1,5 +1,16 @@
 @use 'variables';
 
+// Self-hosted pixel font (Option A of code review T2): the latin subset of
+// 'Press Start 2P' (OFL) lives in public/fonts, so no external font request
+// is ever made and the CSP can stay closed.
+@font-face {
+  font-family: 'Press Start 2P';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/PressStart2P-Regular.woff2') format('woff2');
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
