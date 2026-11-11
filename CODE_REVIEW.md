@@ -122,7 +122,7 @@ Status legend: `[ ]` open, `[x]` done.
 ### T4. `npm test` runs vitest in watch mode and never exits
 
 - **Priority:** P2 (developer experience)
-- **Status:** [ ]
+- **Status:** [x]
 - **Files:** `package.json` (line 11: `"test": "vitest"`)
 - **Current behavior:** `npm test` starts vitest in watch mode and never exits, which breaks CI and scripted verification.
 - **Expected behavior:** `npm test` runs the suite once and exits with the proper code.
@@ -337,6 +337,7 @@ The previous report flagged these; they were checked against the code and are co
 
 2026-11-10 — T11 done: committed in-flight camera look-ahead + torch polish (70679c0) and the code review work order (f37eaa2); working tree clean.
 2026-11-10 — T1 done: removed the /vite.svg link from index.html and replaced the manifest's /vite.svg icon entry with the android-chrome PNGs (approved scope extension); build passes, no vite.svg references remain.
+2026-11-10 — T4 done: "test" script changed to "vitest run"; npm test runs the suite once and exits 0 (11/11).
 
 ---
 
