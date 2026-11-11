@@ -14,6 +14,7 @@ import { heroQuery } from '../../game/ecs';
 import { resolveHeroDirection } from '../../game/hero/intent';
 import { useHeroEntity } from '../../hooks/hero/useHeroEntity';
 import { useHeroAnimation } from '../../hooks/hero/useHeroAnimation';
+import { useHeroBrain } from '../../hooks/hero/useHeroBrain';
 import { useHeroMovement } from '../../hooks/hero/useHeroMovement';
 import { useHeroRig } from '../../hooks/hero/useHeroRig';
 import type { DungeonLayout } from '../../types';
@@ -51,6 +52,7 @@ export default function Hero({ layout }: HeroProps) {
   useHeroEntity(layout.spawn);
   const rig = useHeroRig();
   useHeroAnimation(rig);
+  useHeroBrain(layout);
 
   const bodyRef = useRef<RapierRigidBody>(null);
   const colliderRef = useRef<RapierCollider>(null);

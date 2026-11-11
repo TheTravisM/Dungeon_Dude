@@ -6,7 +6,11 @@ import {
   type RapierRigidBody,
 } from '@react-three/rapier';
 import { PHYSICS_TIME_STEP } from '../../game/constants';
-import { FLOOR_TOP } from '../../game/dungeon/constants';
+import {
+  FLOOR_TOP,
+  gridToWorld,
+  worldToGrid,
+} from '../../game/dungeon/constants';
 import { heroQuery } from '../../game/ecs';
 import { HERO_CONTROLLER_OFFSET, HERO_SPEED } from '../../game/hero/constants';
 
@@ -30,6 +34,14 @@ interface CharacterController {
 /** Reused per step so the movement callback does not churn fresh objects. */
 const scratchDelta = { x: 0, y: 0, z: 0 };
 const scratchTarget = { x: 0, y: 0, z: 0 };
+
+/** Last-resort recovery flag; consumed by the next physics step. */
+let snapRequested = false;
+
+/** Requests a one-step teleport to the center of the hero's current cell. */
+export function requestSnapToCell(): void {
+  snapRequested = true;
+}
 
 /**
  * Drives the kinematic hero through Rapier's character controller.
@@ -68,6 +80,27 @@ export function useHeroMovement(
     const controller = controllerRef.current;
     if (!body || !collider || !controller) return;
 
+    const hero = heroQuery.first;
+
+    if (snapRequested) {
+      snapRequested = false;
+      const current = body.translation();
+      scratchTarget.x = gridToWorld(worldToGrid(current.x));
+      scratchTarget.y = FLOOR_TOP;
+      scratchTarget.z = gridToWorld(worldToGrid(current.z));
+      body.setTranslation(scratchTarget, true);
+
+      if (hero) {
+        hero.position?.set(scratchTarget.x, FLOOR_TOP, scratchTarget.z);
+        if (hero.velocity) {
+          hero.velocity[0] = 0;
+          hero.velocity[1] = 0;
+          hero.velocity[2] = 0;
+        }
+      }
+      return;
+    }
+
     const dir = getDesiredDirection(performance.now());
 
     scratchDelta.x = dir.x * HERO_SPEED * PHYSICS_TIME_STEP;
@@ -84,7 +117,6 @@ export function useHeroMovement(
 
     body.setNextKinematicTranslation(scratchTarget);
 
-    const hero = heroQuery.first;
     if (!hero) return;
 
     hero.position?.set(scratchTarget.x, scratchTarget.y, scratchTarget.z);

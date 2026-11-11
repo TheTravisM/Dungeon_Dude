@@ -198,7 +198,7 @@ Do not start feature implementation until the baseline check is understood and a
 | [x] | 5.10 | Path debug overlay |
 | [x] | 5.11 | Explore goals and stuck detector |
 | [x] | 5.12 | Waypoint following and mode arbitration |
-| [ ] | 5.13 | Behavior-tree brain and autonomous exploration |
+| [x] | 5.13 | Behavior-tree brain and autonomous exploration |
 | [ ] | 5.14 | Step 5 integration and acceptance |
 
 ## 6. Step 6 — Monsters and Combat

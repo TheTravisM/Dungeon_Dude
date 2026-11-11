@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.svg" alt="Dungeon Dude — a Diablo-inspired isometric dungeon crawler" width="1000"/>
+  <img src="public/og-image.png" alt="Dungeon Dude — a Diablo-inspired isometric dungeon crawler" width="1000"/>
 </p>
 
 <p align="center">
@@ -45,12 +45,6 @@ Dungeon Dude is a 3D isometric dungeon crawler built with React Three Fiber. It 
 The scene is rendered as a miniature diorama — a 20×20 tile dungeon on a stone pedestal, with tilt-shift, dither, film grain, and a vignette applied so it looks like a model someone built in a very patient afternoon.
 
 **Current state:** the dungeon is generated, rendered, and collidable. The hero, the monsters, the UI, and the audio are next on the docket. The [Roadmap](#the-roadmap-whats-real-and-whats-promised) has the honest version.
-
-<p align="center">
-  <!-- When the game looks good, drop a screenshot in public/ and uncomment:
-  <img src="/screenshot.png" alt="Dungeon Dude in the browser" width="900"/>
--->
-</p>
 
 ---
 
@@ -187,7 +181,7 @@ src/
 - **License:** This project does not include a license. Until one is added, the default copyright terms apply.
 - **Seed 1337:** Yes, that's leet. No, we're not sorry.
 - **The voice:** Step 8 wires the game to a local XTTS v2 server running a `deckard_cain` voice model. The dungeon is about to get a narrator. You're welcome.
-- **No screenshots yet:** The dungeon is new and hasn't posed for photos. When it does, the image slot near [The Legend](#the-legend) is waiting.
+- **The picture up top:** that's `public/og-image.png` — the same image social links use, doing double duty as the first photo the dungeon ever posed for.
 
 </details>
 
