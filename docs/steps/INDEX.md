@@ -185,22 +185,21 @@ Do not start feature implementation until the baseline check is understood and a
 
 | Status | Micro-step | Task |
 |---|---|---|
-| [x] | 5.00 | 05-00-preflight |
-| [x] | 5.01 | Hero visual model |
-| [x] | 5.02.01 | Auto-Idle State & Pathfinding Graph |
-| [x] | 5.02 | Torch visuals and efficient lighting |
-| [x] | 5.03.1 | Behavior Tree & Auto-Movement |
-| [x] | 5.03 | Hero Miniplex lifecycle registration |
-| [x] | 05.04.1 | Visual Rotation, ECS Sync, & Pathfinding Tests |
-| [x] | 5.04 | Kinematic body and capsule collider |
-| [x] | 5.05 | Low-level Rapier character-controller movement |
-| [x] | 05.05.1 | Hero AI Interactions & Step 5 Wrap-u |
-| [x] | 5.06 | WASD input and manual-control override |
-| [x] | 5.07 | Grid-based pathfinding over DungeonLayout |
-| [ ] | 5.08 | Autonomous exploration, idle return, and stuck recovery |
-| [ ] | 5.09 | Step 5 integration and acceptance |
-
-> Step 5 note (2026-11-10): 5.08 stays open — autonomous exploration and the four-second idle return are implemented, but stuck recovery is not. 5.09 stays open — Step 5 acceptance has not been run.
+| [x] | 5.00 | Preflight, dependencies, and test runner |
+| [x] | 5.01 | Hero entity and kinematic capsule |
+| [x] | 5.02 | Hero visual model |
+| [x] | 5.03 | Torch light, flame, and embers |
+| [x] | 5.04 | Input module and manual-control clock |
+| [ ] | 5.05 | Character-controller movement |
+| [ ] | 5.06 | Facing, walk cycle, and torch sway |
+| [ ] | 5.07 | Camera follow |
+| [ ] | 5.08 | Navigation grid and path planning |
+| [ ] | 5.09 | Path smoothing |
+| [ ] | 5.10 | Path debug overlay |
+| [ ] | 5.11 | Explore goals and stuck detector |
+| [ ] | 5.12 | Waypoint following and mode arbitration |
+| [ ] | 5.13 | Behavior-tree brain and autonomous exploration |
+| [ ] | 5.14 | Step 5 integration and acceptance |
 
 ## 6. Step 6 — Monsters and Combat
 

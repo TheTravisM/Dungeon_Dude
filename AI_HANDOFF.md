@@ -332,6 +332,20 @@ The user approved implementing 4.06 through 4.12 end-to-end in one pass and keep
 - Wander uses the project's seeded Mulberry32 (`createRandom`) instead of `Math.random()`, so auto-pilot is reproducible per depth. `createHeroTree` takes an optional fourth `seed` parameter (default `DUNGEON_DEFAULT_SEED`); `Hero.tsx` passes `layout.seed`, so the same floor always wanders the same way.
 - The store is the canonical key state: `GameState` gains `hasKey`/`setHasKey`, set on pickup alongside the blackboard's `hasKeyState`, and `descendToNextLevel` resets it (the key is consumed by the descent, matching the tree rebuild). The blackboard copy still drives the tree; the store copy serves the HUD and future systems.
 
+### 2.20 Step 5 decisions (2026-11-09)
+
+- Physics: Rapier low-level `world.createCharacterController(offset)` driven from `useBeforePhysicsStep`; there is no React controller component in `@react-three/rapier` 2.2.0.
+- Pathfinding: reuse the existing deterministic BFS `findGridPath` in `src/game/dungeon/pathfinding.ts`; do not add `ngraph.path`.
+- Decision layer: `mistreevous` 4.3.1 behavior tree, stepped at 5 Hz, with a seeded `random`.
+- Torch light: one shadow-casting `SpotLight` (one shadow map) plus one no-shadow warm `PointLight`.
+- Input: small native key tracker plus native Gamepad poll; Drei `KeyboardControls` cannot clear held keys on window blur.
+- Smoothing: `maath` 0.10.8 `easing.damp3` / `easing.dampAngle` for frame-rate-independent smoothing.
+- Tests: `vitest@^3.2.7` devDependency, node environment, pure modules only; Vite 5 pins Vitest 3.
+- ECS: stay on `miniplex@2.0.0`.
+- Corridors are one tile wide, so the hero uses radius 0.28 and controller offset 0.02.
+- Idle return is 4000 ms and lives only in `HERO_IDLE_RETURN_MS`.
+- Zustand is written only on mode flips.
+
 ---
 
 ## 3. Environment and Commands

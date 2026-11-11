@@ -3,9 +3,11 @@ import { KeyboardControls } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import DebugOverlay from './components/debug/DebugOverlay';
 import DungeonStats from './components/debug/DungeonStats';
+import HeroDebugReadout from './components/debug/HeroDebugReadout';
 import Dungeon from './components/dungeon/Dungeon';
 import Effects from './components/Effects';
 import Hero from './components/hero/Hero';
+import InputBridge from './components/hero/InputBridge';
 import GamePhysics from './components/physics/GamePhysics';
 import IsometricCamera from './components/scene/IsometricCamera';
 import Lighting from './components/scene/Lighting';
@@ -55,10 +57,12 @@ export default function App() {
             <Lighting />
             <GamePhysics>
               <Dungeon layout={layout} />
-              <Hero position={[layout.spawn.x, layout.spawn.y, layout.spawn.z]} />
+              <Hero key={layout.seed} layout={layout} />
+              <InputBridge />
             </GamePhysics>
             <Effects />
             <DungeonStats visible={statsVisible} />
+            {import.meta.env.DEV && <HeroDebugReadout />}
           </Canvas>
         </KeyboardControls>
       </div>

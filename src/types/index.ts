@@ -13,14 +13,16 @@ export interface Position {
 
 // Zustand global game state
 export interface GameState {
-  isAutoMode: boolean;
+  autoPlaying: boolean;
+  lastInputTime: number;
   currentDepth: number;
   goldCollected: number;
   monstersSlain: number;
   hasKey: boolean;
   debugPanelOpen: boolean;
   physicsDebug: boolean;
-  setAutoMode: (isAuto: boolean) => void;
+  setAutoPlaying: (isAuto: boolean) => void;
+  updateLastInputTime: () => void;
   incrementGold: (amount: number) => void;
   incrementMonstersSlain: () => void;
   setHasKey: (hasKey: boolean) => void;

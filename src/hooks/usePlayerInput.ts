@@ -53,7 +53,7 @@ export function usePlayerInput(): PlayerInput {
   const [, get] = useKeyboardControls();
   // The mode flips rarely, so a subscription is cheap and keeps the returned
   // isAutoMode fresh for the hero controller.
-  const isAutoMode = useGameStore((state) => state.isAutoMode);
+  const isAutoMode = useGameStore((state) => state.autoPlaying);
 
   const stateRef = useRef<PlayerInputState | null>(null);
   if (stateRef.current === null) {
@@ -108,12 +108,12 @@ export function usePlayerInput(): PlayerInput {
     // Idle timer: manual input refreshes the stamp and forces manual mode;
     // past the timeout with no input the game flips back to auto. Zustand is
     // only written when the mode actually flips.
-    const { isAutoMode: autoMode, setAutoMode } = useGameStore.getState();
+    const { autoPlaying: autoMode, setAutoPlaying } = useGameStore.getState();
     if (state.isManual) {
       lastInputTimeRef.current = performance.now();
-      if (autoMode) setAutoMode(false);
+      if (autoMode) setAutoPlaying(false);
     } else if (!autoMode && performance.now() - lastInputTimeRef.current > IDLE_TIMEOUT_MS) {
-      setAutoMode(true);
+      setAutoPlaying(true);
     }
 
     return state;

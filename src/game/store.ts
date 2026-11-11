@@ -13,12 +13,13 @@ const initialPhysicsDebug = import.meta.env.VITE_DEBUG_PHYSICS === 'true';
  * combat hit points stay in the ECS world and refs so they never trigger a
  * React render. This store is safe to subscribe to from the HUD.
  *
- * `isAutoMode` is the coarse manual/auto toggle. The idle timestamp that
- * drives it lives at module level in `usePlayerInput` so per-frame input
- * sampling never writes to this store; only the mode flip does.
+ * `autoPlaying` is the coarse manual/auto toggle. The idle clock itself lives
+ * in the framework-free input module; only a mode flip writes here, so input
+ * sampling never causes a render.
  */
 export const useGameStore = create<GameState>()((set) => ({
-  isAutoMode: false,
+  autoPlaying: true,
+  lastInputTime: 0,
   currentDepth: startingLevel,
   goldCollected: 0,
   monstersSlain: 0,
@@ -26,7 +27,9 @@ export const useGameStore = create<GameState>()((set) => ({
   debugPanelOpen: false,
   physicsDebug: initialPhysicsDebug,
 
-  setAutoMode: (isAuto) => set({ isAutoMode: isAuto }),
+  setAutoPlaying: (isAuto) => set({ autoPlaying: isAuto }),
+
+  updateLastInputTime: () => set({ lastInputTime: performance.now() }),
 
   incrementGold: (amount) => set((state) => ({ goldCollected: state.goldCollected + amount })),
 
@@ -40,7 +43,7 @@ export const useGameStore = create<GameState>()((set) => ({
   descendToNextLevel: () =>
     set((state) => ({
       currentDepth: state.currentDepth + 1,
-      isAutoMode: true,
+      autoPlaying: true,
       hasKey: false,
     })),
 

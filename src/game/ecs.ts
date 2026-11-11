@@ -54,6 +54,7 @@ export function createHero(position: Vector3): Entity {
     maxHealth: 100,
     attackPower: 10,
     state: 'idle',
+    heading: 0,
   });
 }
 
