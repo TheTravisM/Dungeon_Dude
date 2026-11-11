@@ -2,6 +2,10 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { easing } from 'maath';
 import { heroQuery } from '../../game/ecs';
+import {
+  attackProgress,
+  heroAttack,
+} from '../../game/hero/combat/attackState';
 import { HERO_SPEED } from '../../game/hero/constants';
 import type { HeroRig } from './useHeroRig';
 
@@ -17,6 +21,16 @@ const POSE_SMOOTH_TIME = 0.1;
 const IDLE_SWAY_RATE = 1.3;
 /** Idle sway amplitude, in radians. */
 const IDLE_SWAY_AMPLITUDE = 0.03;
+/** Sword raised back during wind-up, in radians. */
+const WINDUP_RAISE = 1;
+/** Forward sweep past neutral during the active phase, in radians. */
+const ACTIVE_SWEEP = 1.2;
+/** Hips lean into the active swing, in radians. */
+const ACTIVE_HIP_TILT = 0.1;
+/** Fast smoothing for the sharp active phase. */
+const ACTIVE_SMOOTH_TIME = 0.02;
+/** Recovery eases back into the walk cycle. */
+const RECOVERY_SMOOTH_TIME = 0.08;
 
 /**
  * Procedural locomotion for the hero rig.
@@ -70,9 +84,37 @@ export function useHeroAnimation(rig: HeroRig): void {
     const swordSwing = Math.sin(phase + Math.PI) * 0.35 * ratio;
     const cloakTilt = -0.1 * ratio;
 
+    // A swing overrides the walk-cycle sword arm. Negative x raises the blade
+    // back; positive x sweeps it forward and down. Hips lean into the hit.
+    let swordTarget = swordSwing;
+    let swordSmoothTime = POSE_SMOOTH_TIME;
+    let hipTilt = 0;
+    const now = performance.now();
+
+    if (heroAttack.phase === 'windup') {
+      swordTarget = -WINDUP_RAISE * attackProgress(heroAttack, now);
+      swordSmoothTime = ACTIVE_SMOOTH_TIME;
+    } else if (heroAttack.phase === 'active') {
+      const progress = attackProgress(heroAttack, now);
+      swordTarget = -WINDUP_RAISE + (WINDUP_RAISE + ACTIVE_SWEEP) * progress;
+      swordSmoothTime = ACTIVE_SMOOTH_TIME;
+      hipTilt = ACTIVE_HIP_TILT * progress;
+    } else if (heroAttack.phase === 'recovery') {
+      const progress = attackProgress(heroAttack, now);
+      swordTarget = ACTIVE_SWEEP + (swordSwing - ACTIVE_SWEEP) * progress;
+      swordSmoothTime = RECOVERY_SMOOTH_TIME;
+    }
+
     easing.damp(legLeft.rotation, 'x', legSwing, POSE_SMOOTH_TIME, delta);
     easing.damp(legRight.rotation, 'x', -legSwing, POSE_SMOOTH_TIME, delta);
-    easing.damp(armSword.rotation, 'x', swordSwing, POSE_SMOOTH_TIME, delta);
+    easing.damp(
+      armSword.rotation,
+      'x',
+      swordTarget,
+      swordSmoothTime,
+      delta
+    );
+    easing.damp(hips.rotation, 'x', hipTilt, POSE_SMOOTH_TIME, delta);
     easing.damp(cloak.rotation, 'x', cloakTilt, POSE_SMOOTH_TIME, delta);
 
     const bob = 0.5 + Math.abs(swing) * 0.04 * ratio;

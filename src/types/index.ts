@@ -76,6 +76,8 @@ export interface DungeonLayout {
   spawn: Position;
 }
 
+export type MonsterArchetypeId = 'slime' | 'skeleton' | 'bat';
+
 // Miniplex ECS Entity definition
 export interface Entity {
   id: string;
@@ -98,6 +100,12 @@ export interface Entity {
   // Additions for Step 5
   isPlayer?: boolean;
   heading?: number; // Radians for visual mesh rotation
+
+  // Monster data (Step 6). Stats come from the archetype table, not the entity.
+  archetype?: MonsterArchetypeId;
+  roomIndex?: number;        // index into DungeonLayout.rooms where it spawned
+  attackReadyAt?: number;    // ms; the next swing may start at or after this
+  hurtUntil?: number;        // ms; hit-flash and invulnerability window end
 
   // Points of Interest (Step 5: keys, stairs, loot, enemies)
   poiType?: 'loot' | 'key' | 'stairs' | 'enemy';

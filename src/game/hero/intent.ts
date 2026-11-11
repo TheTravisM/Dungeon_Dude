@@ -1,3 +1,4 @@
+import { combatDirection } from './combat/combatIntent';
 import { HERO_WAYPOINT_REACH } from './constants';
 import { inputState, isManualNow } from './input/inputState';
 import { axesToWorldDirection } from './isoMovement';
@@ -7,6 +8,9 @@ import { clearRoute, routeState, setRoute } from './navigation/routeState';
 
 /** Tracks the manual/auto transition so the route is cleared exactly once. */
 let wasManual = false;
+
+/** Scratch for the auto combat intent; returned and consumed immediately. */
+const combatDirectionOut = { x: 0, z: 0 };
 
 function withinReach(pos: WorldPoint, waypoint: WorldPoint): boolean {
   return (
@@ -31,6 +35,11 @@ export function resolveHeroDirection(
   }
 
   wasManual = false;
+
+  // Combat outranks exploration: hold still and face the target while swinging.
+  if (combatDirection(nowMs, combatDirectionOut)) {
+    return combatDirectionOut;
+  }
 
   const points = routeState.points;
   let consumed = 0;

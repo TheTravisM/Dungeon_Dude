@@ -2,30 +2,24 @@ import { BehaviourTree, State } from 'mistreevous';
 import type { DungeonLayout } from '../../../types';
 import { gridToWorld } from '../../dungeon/constants';
 import { createRandom } from '../../dungeon/random';
+import { heroCombat, resetCombat } from '../combat/combatIntent';
 import { planWorldPath, type WorldPoint } from '../navigation/heroPath';
 import { clearRoute, routeState, setRoute } from '../navigation/routeState';
 import { smoothPath } from '../navigation/smoothPath';
 import { createWalkGrid } from '../navigation/walkGrid';
-import {
-  createExploreState,
-  markVisited,
-  pickNextRoom,
-  pickWanderCell,
-  roomIndexAt,
-} from './exploreGoals';
+import { createHeroCombatActions } from './heroCombatActions';
+import { createExploreState, markVisited, pickNextRoom, pickWanderCell, roomIndexAt } from './exploreGoals';
 import { createStuckDetector } from './stuckDetector';
 
 /**
- * The autonomous hero tree. Step 6 and later add combat, loot, and descent
- * branches as siblings inside this selector.
+ * The autonomous hero tree. Combat is the top priority, then exploration.
+ * Every action is instant so earlier conditions can be re-evaluated each tick.
  */
-const HERO_TREE = `
+export const HERO_TREE = `
 root {
   selector {
-    sequence {
-      condition [HasRoute]
-      action [TrackRoute]
-    }
+    sequence { condition [EnemyInReach] action [Fight] }
+    sequence { condition [HasRoute]     action [TrackRoute] }
     action [PlanNext]
   }
 }
@@ -41,10 +35,7 @@ export interface HeroBrain {
 
 function roomCenterWorld(layout: DungeonLayout, roomIndex: number): WorldPoint {
   const center = layout.rooms[roomIndex].center;
-  return {
-    x: gridToWorld(center.x, layout.size),
-    z: gridToWorld(center.z, layout.size),
-  };
+  return { x: gridToWorld(center.x, layout.size), z: gridToWorld(center.z, layout.size) };
 }
 
 /**
@@ -61,6 +52,12 @@ export function createHeroBrain(
   const grid = createWalkGrid(layout);
   const explore = createExploreState();
   const stuck = createStuckDetector();
+  const combat = createHeroCombatActions(
+    grid,
+    getPosition,
+    () => nowMs,
+    (now, position) => stuck.reset(now, position)
+  );
 
   let nowMs = 0;
   let planFailures = 0;
@@ -83,6 +80,8 @@ export function createHeroBrain(
   }
 
   function TrackRoute(): State {
+    heroCombat.engaged = false;
+
     if (routeState.points.length === 0) {
       // The route was consumed: the goal room is now visited.
       const goal = routeState.goal;
@@ -99,7 +98,7 @@ export function createHeroBrain(
       // Replan to the same goal without resetting the detector, so a real
       // problem still escalates next window.
       const goal = routeState.goal;
-      if (goal && planToGoal(goal)) return State.RUNNING;
+      if (goal && planToGoal(goal)) return State.SUCCEEDED;
 
       skipGoalRoom = true;
       return State.FAILED;
@@ -118,10 +117,11 @@ export function createHeroBrain(
       return State.FAILED;
     }
 
-    return State.RUNNING;
+    return State.SUCCEEDED;
   }
 
   function PlanNext(): State {
+    heroCombat.engaged = false;
     const from = getPosition();
 
     // A very short route can be consumed before TrackRoute ever runs, so credit
@@ -174,11 +174,10 @@ export function createHeroBrain(
     return State.SUCCEEDED;
   }
 
-  const tree = new BehaviourTree(
-    HERO_TREE,
-    { HasRoute, TrackRoute, PlanNext },
-    { random: () => rng.next() }
-  );
+  const tree = new BehaviourTree(HERO_TREE, {
+    EnemyInReach: combat.EnemyInReach, Fight: combat.Fight,
+    HasRoute, TrackRoute, PlanNext,
+  }, { random: () => rng.next() });
 
   return {
     tick(nextNowMs) {
@@ -190,6 +189,7 @@ export function createHeroBrain(
       nowMs = nextNowMs;
       tree.reset();
       clearRoute();
+      resetCombat();
       stuck.reset(nextNowMs, getPosition());
       planFailures = 0;
       skipGoalRoom = false;

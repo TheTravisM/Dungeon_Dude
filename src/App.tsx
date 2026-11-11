@@ -9,6 +9,7 @@ import Dungeon from './components/dungeon/Dungeon';
 import Effects from './components/Effects';
 import Hero from './components/hero/Hero';
 import InputBridge from './components/hero/InputBridge';
+import LevelEntities from './components/level/LevelEntities';
 import GamePhysics from './components/physics/GamePhysics';
 import CameraFollow from './components/scene/CameraFollow';
 import {
@@ -65,6 +66,7 @@ export default function App() {
             <GamePhysics>
               <Dungeon layout={layout} />
               <Hero key={layout.seed} layout={layout} />
+              <LevelEntities layout={layout} />
               <InputBridge />
             </GamePhysics>
             <Effects />
@@ -78,7 +80,7 @@ export default function App() {
       <div className={styles.uiLayer}>
         <div className={styles.badge}>
           <span className={styles.badgeTitle}>Dungeon Dude</span>
-          <span className={styles.badgeStep}>Step 5 - Hero Controller</span>
+          <span className={styles.badgeStep}>Step 6 - Monsters and Combat</span>
           <span className={styles.badgeMeta}>
             Depth {currentDepth} / Seed {layout.seed}
           </span>

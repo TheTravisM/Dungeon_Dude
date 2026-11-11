@@ -40,3 +40,14 @@ export const HERO_PATH_CLEARANCE = 0.32;
 
 /** Left-stick deadzone for the native gamepad poll. */
 export const GAMEPAD_DEADZONE = 0.25;
+
+/** One sword swing: wind-up, hit window, and recovery, all in milliseconds. */
+export const HERO_ATTACK_WINDUP_MS = 120;
+export const HERO_ATTACK_ACTIVE_MS = 140;
+export const HERO_ATTACK_RECOVERY_MS = 260;
+/** Tiles, center to center; the sword sensor in 06-07 uses this. */
+export const HERO_ATTACK_REACH = 1.15;
+/** Tiles; auto mode starts fighting inside this. */
+export const HERO_ENGAGE_RANGE = 2.6;
+/** How long a combat intent stays valid without a refresh. */
+export const HERO_COMBAT_HOLD_MS = 300;

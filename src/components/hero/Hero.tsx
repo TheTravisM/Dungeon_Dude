@@ -14,6 +14,7 @@ import { heroQuery } from '../../game/ecs';
 import { resolveHeroDirection } from '../../game/hero/intent';
 import { useHeroEntity } from '../../hooks/hero/useHeroEntity';
 import { useHeroAnimation } from '../../hooks/hero/useHeroAnimation';
+import { useHeroAttack } from '../../hooks/hero/useHeroAttack';
 import { useHeroBrain } from '../../hooks/hero/useHeroBrain';
 import { useHeroMovement } from '../../hooks/hero/useHeroMovement';
 import { useHeroRig } from '../../hooks/hero/useHeroRig';
@@ -51,6 +52,9 @@ function desiredDirection(nowMs: number): { x: number; z: number } {
 export default function Hero({ layout }: HeroProps) {
   useHeroEntity(layout.spawn);
   const rig = useHeroRig();
+  // Attack state updates before the animation reads it, so the sword pose is
+  // never one frame behind the phase transition.
+  useHeroAttack();
   useHeroAnimation(rig);
   useHeroBrain(layout);
 

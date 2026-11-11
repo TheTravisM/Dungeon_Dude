@@ -1,6 +1,7 @@
 import { World } from 'miniplex';
 import { Vector3 } from 'three';
-import type { Entity } from '../types';
+import type { Entity, MonsterArchetypeId } from '../types';
+import { MONSTER_ARCHETYPES, scaleStat } from './monsters/archetypes';
 
 /**
  * The single ECS world for the game. It lives at module scope so systems and
@@ -27,6 +28,9 @@ export const monsterQuery = world.with(
 
 /** Static or interactive scenery that is neither the hero nor a monster. */
 export const propQuery = world.with('position').without('isHero', 'isMonster');
+
+/** Keys and stairs that can be picked up or used. */
+export const poiQuery = world.with('poiType', 'position', 'isActive');
 
 let entitySequence = 0;
 
@@ -59,16 +63,24 @@ export function createHero(position: Vector3): Entity {
 }
 
 interface MonsterOptions {
-  health?: number;
-  attackPower?: number;
+  depth?: number;      // defaults to 1; scales health and attack power
+  roomIndex?: number;  // defaults to -1 (not tied to a room)
 }
 
 /**
  * Creates a monster entity with the same component shape every time. Keeping
  * the shape stable avoids archetype churn when many monsters spawn at once.
+ * Stats come from the frozen archetype table; the entity stores only mutable
+ * state and the archetype id.
  */
-export function createMonster(position: Vector3, options: MonsterOptions = {}): Entity {
-  const maxHealth = options.health ?? 30;
+export function createMonster(
+  position: Vector3,
+  archetype: MonsterArchetypeId,
+  options: MonsterOptions = {}
+): Entity {
+  const stats = MONSTER_ARCHETYPES[archetype];
+  const depth = options.depth ?? 1;
+  const maxHealth = scaleStat(stats.maxHealth, depth);
 
   return world.add({
     id: nextEntityId('monster'),
@@ -77,8 +89,13 @@ export function createMonster(position: Vector3, options: MonsterOptions = {}): 
     velocity: [0, 0, 0],
     health: maxHealth,
     maxHealth,
-    attackPower: options.attackPower ?? 5,
+    attackPower: scaleStat(stats.attackPower, depth),
     state: 'idle',
+    heading: 0,
+    archetype,
+    roomIndex: options.roomIndex ?? -1,
+    attackReadyAt: 0,
+    hurtUntil: 0,
   });
 }
 
@@ -91,5 +108,16 @@ export function createProp(position: Vector3): Entity {
     id: nextEntityId('prop'),
     position: position.clone(),
     state: 'idle',
+  });
+}
+
+/** Creates a key or stairs marker. POIs are inert until a later task acts. */
+export function createPoi(position: Vector3, poiType: 'key' | 'stairs'): Entity {
+  return world.add({
+    id: nextEntityId('poi'),
+    position: position.clone(),
+    state: 'idle',
+    poiType,
+    isActive: true,
   });
 }

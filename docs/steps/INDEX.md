@@ -199,18 +199,18 @@ Do not start feature implementation until the baseline check is understood and a
 | [x] | 5.11 | Explore goals and stuck detector |
 | [x] | 5.12 | Waypoint following and mode arbitration |
 | [x] | 5.13 | Behavior-tree brain and autonomous exploration |
-| [ ] | 5.14 | Step 5 integration and acceptance |
+| [x] | 5.14 | Step 5 integration and acceptance |
 
 ## 6. Step 6 — Monsters and Combat
 
 | Status | Micro-step | Task |
 |---|---|---|
-| [ ] | 6.01 | Monster archetype data and entity contract |
-| [ ] | 6.02 | Monster visual component |
-| [ ] | 6.03 | Deterministic monster spawning and ECS lifecycle |
-| [ ] | 6.04 | Spatial grid/hash proximity index |
-| [ ] | 6.05 | Monster aggro and movement behavior |
-| [ ] | 6.06 | Rapier sensor-based sword hit detection |
+| [x] | 6.01 | Monster archetype data and entity contract |
+| [x] | 6.02 | Monster visual component |
+| [x] | 6.03 | Deterministic monster spawning and ECS lifecycle |
+| [x] | 6.04 | Spatial grid/hash proximity index |
+| [x] | 6.05 | Monster aggro and movement behavior |
+| [x] | 6.06 | Hero attack state and fight behavior |
 | [ ] | 6.07 | Damage resolution and readable combat feedback |
 | [ ] | 6.08 | Death handling, pooling, and cleanup |
 | [ ] | 6.09 | Step 6 integration and acceptance |

@@ -21,9 +21,61 @@ This document is a living log. Update it at the end of every step, immediately b
 - **Step 3 commit status:** Committed together with this handoff document under `feat: add ECS foundation and Rapier physics`.
 - **Expected dirty files for the Step 3 commit:** `package.json`, `package-lock.json`, `src/App.tsx`, `src/App.module.scss`, `src/components/scene/Floor.tsx`, `src/vite-env.d.ts`, `src/game/constants.ts`, `src/game/ecs.ts`, `src/game/store.ts`, `src/components/physics/GamePhysics.tsx`, `src/components/physics/FloorCollider.tsx`, `src/components/physics/PhysicsProbe.tsx`, and this file.
 
-#### Step 5 completion status (2026-11-10)
+#### Step 5 completion status (2026-11-11, micro-step 05-14)
 
-Step 5 is code-complete for the AI visualization and seed hardening micro-steps. Browser acceptance for the remaining Step 5 polish items is still pending.
+Step 5 is code-complete and all automated verification passes. Browser soak acceptance (10 minutes on seeds 1 and 42, 5 minutes on a chosen seed) remains for the user; `INDEX.md` 5.14 and the Step 5 header are ticked only after that approval.
+
+**File map**
+
+- `src/components/hero/Hero.tsx` — composes entity, rig, animation, brain, and Rapier body/collider/movement. `HeroModel.tsx`, `HeroTorch.tsx`, and `useTorchFlicker.ts` own the visual model and the single shadow-casting torch spotlight.
+- `src/hooks/hero/` — `useHeroEntity` (one ECS hero), `useHeroRig` (unconditional refs), `useHeroAnimation` (walk cycle), `useHeroMovement` (character controller plus snap recovery), `useHeroBrain` (5 Hz tree clock and manual gating).
+- `src/game/hero/constants.ts` — every Step 5 tuning value.
+- `src/game/hero/input/` — `keyTracker`, `gamepad`, `manualControl`, `inputState`; `src/components/hero/InputBridge.tsx` attaches the native listeners.
+- `src/game/hero/intent.ts`, `isoMovement.ts` — manual/auto arbitration and camera-relative axes.
+- `src/game/hero/navigation/` — `walkGrid`, `heroPath`, `smoothPath`, `route`, `routeState` (module singleton route).
+- `src/game/hero/ai/` — `exploreGoals`, `stuckDetector`, `heroBrain` (Mistreevous MDSL tree).
+- `src/components/debug/` — `DebugOverlay`, `DungeonStats`, `HeroDebugReadout`, `PathDebug`; all are `import.meta.env.DEV` gated and absent from production builds.
+- Tests: `exploreSim.test.ts` (headless 50-seed exploration), plus navigation, input, intent, brain-support, and Mistreevous semantics suites.
+
+**Verified**
+
+- `npx tsc -b --pretty false`, `npm run lint`, `npm test` (83/83), `npm run build`, `node scripts/verify-dungeon.mjs` (500/500 seeds), and `git diff --check` all pass.
+- `exploreSim.test.ts` simulates a point mass at `HERO_SPEED` in 60 Hz steps for seeds 1 to 50 using the same pure planning modules as the brain. Every room is visited within 60 simulated seconds per room, every step is on a walkable cell, and no reachable room route is null.
+- Production preview serves without debug UI; the built JS contains no debug-overlay strings.
+- `howler` and `@types/howler` were unused and were removed from `package.json`.
+
+**Tuning constants**
+
+- Capsule radius `0.28`, height `1.05`, ground clearance `0.02`, controller offset `0.02`, speed `3.0` world units per second.
+- `HERO_WAYPOINT_REACH = 0.12`, `HERO_PATH_CLEARANCE = 0.32`, `HERO_BRAIN_HZ = 5`, `HERO_IDLE_RETURN_MS = 4000`.
+- Stuck detection: `HERO_STUCK_WINDOW_MS = 1000`, `HERO_STUCK_MIN_PROGRESS = 0.3`, recovery levels 0 to 3 (replan, new goal, snap to cell).
+- Camera zoom `64`; the fixed isometric camera does not follow or lead per user feedback.
+- Torch: one shadow-casting spotlight (512 map), one no-shadow warm point light.
+
+**Known limitations**
+
+- The hero does not attack; `Space` is recorded only as `inputState.attack` for Step 6.
+- No doors, keys, or stairs in the new Step 5 path. The old POI tree (`src/game/ai/HeroTree.ts`), `src/game/pathfinding.ts`, and `tests/herotree.test.ts` remain from the superseded implementation and are not used by the new brain.
+- Stuck recovery snaps to the current cell center only at level 3; a monster or dynamic obstacle is not yet considered.
+
+**Decisions made along the way**
+
+- The `docs/steps/05-01-hero-and-ai/` series supersedes the older `05-hero-and-ai` implementation; the rebuild was intentional.
+- Input uses native listeners plus a module singleton instead of Drei `KeyboardControls`, so held keys clear on blur.
+- The torch spotlight is the only shadow caster.
+- `useHeroRig` uses one unconditional `useRef` plus `createRef`; React Compiler must not memoize an object literal of hooks.
+- The brain credits a completed room in both `TrackRoute` (empty route) and `PlanNext` (short-route safety), and `useHeroBrain` clears the shared route on mount/unmount so floors cannot leak routes.
+- The 5.10 "Route to random room" step is implemented as click-to-route on an invisible floor plane.
+
+**Step 6 pointers**
+
+- Add combat/loot/descent branches as siblings in the `HERO_TREE` MDSL const in `src/game/hero/ai/heroBrain.ts`.
+- Combat reads hero position, heading, and velocity from `heroQuery.first`.
+- `Space` maps to `inputState.attack`.
+
+#### Step 5 completion status (2026-11-10, superseded)
+
+Step 5 is code-complete for the AI visualization and seed hardening micro-steps. Browser acceptance for the remaining Step 5 polish items is still pending. This entry describes the earlier `05-hero-and-ai` implementation and is preserved as history; the 2026-11-11 block above is authoritative.
 
 - Added real-time AI intent visualization using Drei Html for state labeling and Drei Line for path debugging.
 - Implemented complete pathfinding module with graph validation, seed resilience, and comprehensive Vitest integration coverage.
@@ -486,6 +538,10 @@ Ordered roughly by impact on the final product.
 
 ## 6. Next Immediate Task
 
+#### Status update (2026-11-11, micro-step 05-14)
+
+Step 5 is code-complete and automated acceptance passes: TypeScript, lint, 83/83 tests, production build, the 500-seed dungeon verifier, and whitespace checks. The headless 50-seed exploration simulation is permanent at `src/game/hero/ai/exploreSim.test.ts`. Only the browser soak remains: 10 minutes on seeds 1 and 42, 5 minutes on a chosen seed, with the path overlay on, plus takeover (keys and gamepad if available), alt-tab while holding a key, and a window resize. Do not tick 5.14 or the Step 5 header, and do not start Step 6, until the user approves that soak.
+
 #### Status update (2026-11-09)
 
 Step 4 is approved, committed as `b3ce0b5`, and complete. Step 5 (Hero and Autonomous AI) is active, one micro-step at a time. Micro-step 5.01 (hero visual model) was approved by the user, including the feedback revision that added the sword and sharpened the tilt-shift focus; its INDEX row is ticked. Micro-step 5.02 (torch visuals and efficient lighting) is implemented and awaiting browser approval; do not tick its INDEX row or start 5.03 until that approval. Do not start Step 6 until Step 5 is approved as a whole. The historical Step 3 and Step 4 instructions below are preserved unchanged.
@@ -612,3 +668,4 @@ For the micro-step workflow, `docs/steps/INDEX.md` governs the interaction loop:
 - **2026-11-10 - 05-08 Autonomous exploration, idle return, and stuck recovery:** Implemented `docs/steps/05-hero-and-ai/05-08-autonomous-exploration-idle-return-and-stuck-recovery.md`. The existing wander, four-second idle return, manual override, Rapier collision, and cached-path behavior were already present. Added a 4 Hz path-request cooldown, current-cell target avoidance, and deterministic stuck recovery in `HeroTree.ts`. The blackboard tracks `delta`, `elapsedTime`, `lastProgress`, `stuckTime`, and a rotating `fallbackIndex`; after 1.5 seconds without meaningful movement it scans `layoutCells` in deterministic order for a reachable fallback goal and sets `activeState` to `Recovering`. `Hero.tsx` now writes the frame clock into the blackboard. `tests/herotree.test.ts` adds throttle and stalled-route tests. `npx vitest run` passes 17/17; `npx tsc -b --pretty false`, `npm run lint`, and `npm run build` pass. Browser verification remains pending.
 - **2026-11-10 - 05-09 Step 5 integration and acceptance (automated checks only):** Ran the acceptance verification commands. `npx tsc -b --pretty false` passes; `npm run lint` passes; `npm run build` passes with the existing Sass legacy API and large-chunk warnings; `git diff --check` reports only the Windows LF-to-CRLF warning for `src/components/hero/Hero.tsx`. Browser acceptance is still required for spawn alignment, grounded movement, wall collisions, torch lighting, ECS uniqueness and cleanup, WASD override, exact four-second idle return, pathfinding, and stuck recovery. Do not tick 5.08 or 5.09, commit, or start Step 6 until the user confirms the browser checks.
 - **2026-11-10 - Step 5 browser bug fixes (awaiting re-verification):** Fixed the four defects reported after browser testing. `Hero.tsx` replaces the auto-generated per-mesh cuboid colliders with one explicit `CapsuleCollider` (`args={[0.37, 0.28]}`, `position={[0, 0.65, 0]}`, `colliders={false}`) and uses a collider ref for `computeColliderMovement`; `body.collider(0)` had been a single boot offset from the body centre, causing asymmetric clipping on the northeast and southeast walls. The per-frame camera follow, `CAMERA_OFFSET`, `LOOK_AHEAD_FACTOR`, and `LOOK_AT_LEAD` were removed so `IsometricCamera` stays fixed and the floor no longer swims; this intentionally supersedes 05-07-01's look-ahead on direct user feedback. `useTorchFlicker.ts` now calls `target.updateWorldMatrix(true, false)` every frame so the spotlight tracks the rotating torch anchor instead of aiming at a stale world point and producing the bright disc on the hero's back. Auto-walk smoothness benefits from the capsule/controller fix plus the existing 4 Hz replan cap and stuck recovery. `npx tsc -b --pretty false`, `npm run lint`, and `npx vitest run` (17/17) pass; `npm run build` and `git diff --check` are reported with the change. Browser re-verification is pending; 5.08 and 5.09 remain unticked and uncommitted.
+- **2026-11-11 - 05-14 Step 5 integration and acceptance:** Added `src/game/hero/ai/exploreSim.test.ts`, a headless point-mass simulation over seeds 1 to 50. It mirrors the brain and intent loop (pick room, plan world path, smooth, consume waypoints within `HERO_WAYPOINT_REACH`, move at `HERO_SPEED` in 60 Hz steps) and asserts every room is visited within 60 simulated seconds per room, every sampled position is walkable, and no reachable route is null. Cleanup found no `TEMP`, `console.*`, or dead imports in `src`; the dev readout, path overlay, and click-to-route tool stay `import.meta.env.DEV` gated. Removed the unused `howler` and `@types/howler` dependencies. `npx tsc -b --pretty false`, `npm run lint`, `npm test` (83/83), `npm run build`, `node scripts/verify-dungeon.mjs` (500/500 seeds), and `git diff --check` pass. The production build contains no debug-overlay strings. Browser soak acceptance (seeds 1, 42, and a user seed) and the INDEX 5.14/header ticks remain pending.
