@@ -220,7 +220,7 @@ Do not start feature implementation until the baseline check is understood and a
 | Status | Micro-step | Task |
 |---|---|---|
 | [x] | 7.01 | Screen-state model and transition boundaries |
-| [ ] | 7.02 | View Transitions API integration and reduced motion |
+| [x] | 7.02 | View Transitions API integration and reduced motion |
 | [ ] | 7.03 | Main Menu interface and start flow |
 | [ ] | 7.04 | HUD: health, gold, and depth |
 | [ ] | 7.05 | Game Over interface and restart/continue flow |
