@@ -49,8 +49,15 @@ const CAMERA_OFFSET: [number, number, number] = [10, 10, 10];
 /**
  * Cinematic look-ahead (05-07-01): how far in front of the hero the camera
  * target leads along the current movement direction, in world units.
+ * Derived from SPEED so the lead stays proportional if walk speed changes.
  */
-const LOOK_AHEAD_FACTOR = 2.5;
+const LOOK_AHEAD_FACTOR = SPEED * 0.5;
+/**
+ * Cinematic look-at lead (05-07-01 follow-up): how far in front of the hero
+ * the camera aims while it moves, in world units; idle it settles back on
+ * the hero.
+ */
+const LOOK_AT_LEAD = 1;
 /** Torch anchor: the flame in the right hand, in body-local space. */
 const TORCH_ANCHOR: [number, number, number] = [0.38, 1.05, -0.02];
 
@@ -212,7 +219,12 @@ export default function Hero({ position }: HeroProps) {
       0.2,
       delta
     );
-    state.camera.lookAt(pos.x, pos.y, pos.z);
+    // The look point leads the hero by LOOK_AT_LEAD while it moves, so the
+    // view frames more of the path ahead; when idle it settles back on the
+    // hero.
+    const lookLeadX = moveDir ? moveDir.x * LOOK_AT_LEAD : 0;
+    const lookLeadZ = moveDir ? moveDir.z * LOOK_AT_LEAD : 0;
+    state.camera.lookAt(pos.x + lookLeadX, pos.y, pos.z + lookLeadZ);
 
     // 5. Mirror the body into the ECS entity for AI and debug systems.
     const entity = entityRef.current;

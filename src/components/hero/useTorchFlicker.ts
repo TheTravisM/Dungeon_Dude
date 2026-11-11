@@ -4,6 +4,12 @@ import type { Group, Object3D, SpotLight } from 'three';
 
 /** Spotlight intensity before flicker, in Three's physical light units. */
 const BASE_INTENSITY = 70;
+/**
+ * The contract's reference torch base in legacy light units (`2.0 +
+ * flicker`). Dividing the flicker by it ports the contract's relative
+ * depth onto the physical BASE_INTENSITY.
+ */
+const CONTRACT_LEGACY_BASE_INTENSITY = 2;
 
 /**
  * Drives the torch spotlight without allocating per frame. Two fixed-frequency
@@ -40,7 +46,8 @@ export function useTorchFlicker() {
 
     const light = lightRef.current;
     if (light) {
-      light.intensity = BASE_INTENSITY * (1 + flicker / 2);
+      light.intensity =
+        BASE_INTENSITY * (1 + flicker / CONTRACT_LEGACY_BASE_INTENSITY);
       // Subtle torch sway: the beam gently bobs as the hero walks. The base
       // position is the torch anchor, so this oscillates around it.
       light.position.y = Math.sin(time * 8) * 0.05;

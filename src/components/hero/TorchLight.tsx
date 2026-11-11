@@ -19,7 +19,7 @@ export default function TorchLight() {
         color="#ffb74d"
         intensity={70}
         distance={9}
-        angle={0.6}
+        angle={0.7}
         penumbra={0.5}
         decay={2}
         castShadow
