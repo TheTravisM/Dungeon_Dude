@@ -18,8 +18,10 @@ import {
 } from './components/scene/cameraConstants';
 import IsometricCamera from './components/scene/IsometricCamera';
 import Lighting from './components/scene/Lighting';
+import MainMenu from './components/ui/MainMenu';
 import { getDungeonLayout } from './game/dungeon/getDungeonLayout';
 import { useGameStore } from './game/store';
+import { useScreenStore } from './game/ui/screenStore';
 import styles from './App.module.scss';
 
 /**
@@ -44,6 +46,7 @@ export default function App() {
   // Per-frame data stays in the ECS world instead.
   const currentDepth = useGameStore((state) => state.currentDepth);
   const layout = getDungeonLayout(currentDepth);
+  const screen = useScreenStore((state) => state.screen);
 
   // Diagnostics are a deliberate, infrequent UI action. Keeping the switch here
   // lets the DOM overlay and the in-canvas StatsGl share one piece of state.
@@ -51,46 +54,53 @@ export default function App() {
 
   return (
     <div className={styles.app}>
-      <div className={styles.canvasLayer}>
-        <KeyboardControls map={KEYBOARD_CONTROLS}>
-          <Canvas
-            shadows="percentage"
-            dpr={[1, 2]}
-            orthographic
-            camera={{ position: CAMERA_OFFSET, zoom: CAMERA_ZOOM, near: 0.1, far: 200 }}
-          >
-            <color attach="background" args={['#0b0e14']} />
-            <IsometricCamera />
-            <CameraFollow />
-            <Lighting />
-            <GamePhysics>
-              <Dungeon layout={layout} />
-              <Hero key={layout.seed} layout={layout} />
-              <LevelEntities layout={layout} />
-              <InputBridge />
-            </GamePhysics>
-            <Effects />
-            {import.meta.env.DEV && <PathDebug layout={layout} />}
-            <DungeonStats visible={statsVisible} />
-            {import.meta.env.DEV && <HeroDebugReadout />}
-          </Canvas>
-        </KeyboardControls>
-      </div>
+      {screen === 'playing' && (
+        <div className={styles.canvasLayer}>
+          <KeyboardControls map={KEYBOARD_CONTROLS}>
+            <Canvas
+              shadows="percentage"
+              dpr={[1, 2]}
+              orthographic
+              camera={{ position: CAMERA_OFFSET, zoom: CAMERA_ZOOM, near: 0.1, far: 200 }}
+            >
+              <color attach="background" args={['#0b0e14']} />
+              <IsometricCamera />
+              <CameraFollow />
+              <Lighting />
+              <GamePhysics>
+                <Dungeon layout={layout} />
+                <Hero key={layout.seed} layout={layout} />
+                <LevelEntities layout={layout} />
+                <InputBridge />
+              </GamePhysics>
+              <Effects />
+              {import.meta.env.DEV && <PathDebug layout={layout} />}
+              <DungeonStats visible={statsVisible} />
+              {import.meta.env.DEV && <HeroDebugReadout />}
+            </Canvas>
+          </KeyboardControls>
+        </div>
+      )}
 
       <div className={styles.uiLayer}>
-        <div className={styles.badge}>
-          <span className={styles.badgeTitle}>Dungeon Dude</span>
-          <span className={styles.badgeStep}>Step 6 - Monsters and Combat</span>
-          <span className={styles.badgeMeta}>
-            Depth {currentDepth} / Seed {layout.seed}
-          </span>
-        </div>
-        <DebugOverlay
-          depth={currentDepth}
-          layout={layout}
-          statsVisible={statsVisible}
-          onToggleStats={() => setStatsVisible((visible) => !visible)}
-        />
+        {screen === 'mainMenu' && <MainMenu />}
+        {screen === 'playing' && (
+          <>
+            <div className={styles.badge}>
+              <span className={styles.badgeTitle}>Dungeon Dude</span>
+              <span className={styles.badgeStep}>Step 6 - Monsters and Combat</span>
+              <span className={styles.badgeMeta}>
+                Depth {currentDepth} / Seed {layout.seed}
+              </span>
+            </div>
+            <DebugOverlay
+              depth={currentDepth}
+              layout={layout}
+              statsVisible={statsVisible}
+              onToggleStats={() => setStatsVisible((visible) => !visible)}
+            />
+          </>
+        )}
       </div>
     </div>
   );
