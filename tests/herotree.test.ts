@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { World } from 'miniplex';
 import * as THREE from 'three';
-import { createHeroTree } from '../src/game/ai/HeroTree';
+import { createHeroTree, type HeroTreeEvents } from '../src/game/ai/HeroTree';
 import { gridToWorld } from '../src/game/dungeon/constants';
 import { buildNavGraph } from '../src/game/pathfinding';
-import { useGameStore } from '../src/game/store';
 import type { DungeonLayout, Entity, GridCell } from '../src/types';
 
 /**
- * The tree is fully Node-testable: a real miniplex world, the real store,
- * and the real nav graph. Each test builds its own world (never the shared
- * ECS world) and resets the store singleton so tests stay independent.
+ * The tree is fully Node-testable: a real miniplex world, the real nav
+ * graph, and recording event callbacks in place of the store. Each test
+ * builds its own world (never the shared ECS world) so tests stay
+ * independent.
  */
 
 /** World-space center of a grid cell, matching the dungeon convention. */
@@ -61,22 +61,29 @@ function spawnPoi(world: World<Entity>, poiType: 'key' | 'stairs', x: number, z:
   });
 }
 
-function makeSim(cells: GridCell[], world: World<Entity>, seed: number, at: GridCell): Sim {
-  const nav = buildNavGraph({ floorCells: cells } as DungeonLayout);
-  const ai = createHeroTree(nav, cells, world, seed);
-  return { ai, pos: cellWorld(at.x, at.z) };
-}
+/** No-op events for tests that do not exercise the tree's side effects. */
+const noopEvents: HeroTreeEvents = {
+  onKeyPickedUp: () => {},
+  onDescend: () => {},
+};
 
-function resetStore() {
-  useGameStore.setState({ currentDepth: 1, hasKey: false, isAutoMode: true });
+function makeSim(
+  cells: GridCell[],
+  world: World<Entity>,
+  seed: number,
+  at: GridCell,
+  events: HeroTreeEvents
+): Sim {
+  const nav = buildNavGraph({ floorCells: cells } as DungeonLayout);
+  const ai = createHeroTree(nav, cells, world, seed, events);
+  return { ai, pos: cellWorld(at.x, at.z) };
 }
 
 describe('Hero objective tree', () => {
   it('wanders when no POIs exist', () => {
-    resetStore();
     const world = new World<Entity>();
     const cells = corridor(0, 4);
-    const sim = makeSim(cells, world, 1337, { x: 0, z: 0 });
+    const sim = makeSim(cells, world, 1337, { x: 0, z: 0 }, noopEvents);
     const start = cellWorld(0, 0);
 
     for (let i = 0; i < 20; i++) frame(sim);
@@ -86,10 +93,9 @@ describe('Hero objective tree', () => {
   });
 
   it('is deterministic: the same seed wanders the same way', () => {
-    resetStore();
     const cells = corridor(0, 8);
-    const a = makeSim(cells, new World<Entity>(), 1337, { x: 0, z: 0 });
-    const b = makeSim(cells, new World<Entity>(), 1337, { x: 0, z: 0 });
+    const a = makeSim(cells, new World<Entity>(), 1337, { x: 0, z: 0 }, noopEvents);
+    const b = makeSim(cells, new World<Entity>(), 1337, { x: 0, z: 0 }, noopEvents);
 
     for (let i = 0; i < 30; i++) {
       frame(a);
@@ -99,28 +105,32 @@ describe('Hero objective tree', () => {
     expect(a.pos).toEqual(b.pos);
   });
 
-  it('picks up the key on contact and mirrors it into the store', () => {
-    resetStore();
+  it('picks up the key on contact and fires onKeyPickedUp', () => {
+    let keyPickedUp = 0;
     const world = new World<Entity>();
     const cells = corridor(0, 3);
     const key = spawnPoi(world, 'key', 2, 0);
-    const sim = makeSim(cells, world, 1337, { x: 2, z: 0 });
+    const sim = makeSim(cells, world, 1337, { x: 2, z: 0 }, {
+      onKeyPickedUp: () => {
+        keyPickedUp += 1;
+      },
+      onDescend: () => {},
+    });
 
     frame(sim);
 
     expect(sim.ai.blackboard.hasKeyState).toBe(true);
     expect(key.isActive).toBe(false);
-    expect(useGameStore.getState().hasKey).toBe(true);
+    expect(keyPickedUp).toBe(1);
   });
 
   it('paths to the nearest key, not the first spawned one', () => {
-    resetStore();
     const world = new World<Entity>();
     const cells = corridor(0, 6);
     // Spawned first but far away: the old first-match behaviour would pick it.
     spawnPoi(world, 'key', 5, 0);
     const near = spawnPoi(world, 'key', 1, 0);
-    const sim = makeSim(cells, world, 1337, { x: 0, z: 0 });
+    const sim = makeSim(cells, world, 1337, { x: 0, z: 0 }, noopEvents);
 
     frame(sim);
 
@@ -131,12 +141,11 @@ describe('Hero objective tree', () => {
   });
 
   it('paths to the nearest stairs once the key is held', () => {
-    resetStore();
     const world = new World<Entity>();
     const cells = corridor(0, 6);
     spawnPoi(world, 'stairs', 5, 0);
     const near = spawnPoi(world, 'stairs', 1, 0);
-    const sim = makeSim(cells, world, 1337, { x: 0, z: 0 });
+    const sim = makeSim(cells, world, 1337, { x: 0, z: 0 }, noopEvents);
     sim.ai.blackboard.hasKeyState = true;
 
     frame(sim);
@@ -148,20 +157,28 @@ describe('Hero objective tree', () => {
   });
 
   it('walks to the key, then descends at the stairs', () => {
-    resetStore();
+    let keyPickedUp = 0;
+    let descended = 0;
     const world = new World<Entity>();
     const cells = corridor(0, 4);
     const key = spawnPoi(world, 'key', 2, 0);
     const stairs = spawnPoi(world, 'stairs', 4, 0);
-    const sim = makeSim(cells, world, 1337, { x: 0, z: 0 });
+    const sim = makeSim(cells, world, 1337, { x: 0, z: 0 }, {
+      onKeyPickedUp: () => {
+        keyPickedUp += 1;
+      },
+      onDescend: () => {
+        descended += 1;
+      },
+    });
 
-    const descended = runUntil(sim, () => useGameStore.getState().currentDepth === 2);
+    const finished = runUntil(sim, () => descended === 1);
 
-    expect(descended).toBe(true);
+    expect(finished).toBe(true);
+    expect(keyPickedUp).toBe(1);
+    expect(descended).toBe(1);
     expect(key.isActive).toBe(false);
     expect(stairs.isActive).toBe(false);
-    // The key is consumed by the descent: the rebuilt tree starts keyless.
-    expect(useGameStore.getState().hasKey).toBe(false);
     expect(sim.pos.distanceTo(cellWorld(4, 0))).toBeLessThan(0.6);
   });
 });

@@ -9,6 +9,17 @@ import { world as ecsWorld } from '../ecs';
 import { useGameStore } from '../store';
 
 /**
+ * Store-side effects the tree fires instead of touching the Zustand store
+ * directly, keeping the AI module pure with respect to React. The hero
+ * component wires the callbacks to the store, which stays the canonical
+ * HUD state.
+ */
+export interface HeroTreeEvents {
+    onKeyPickedUp: () => void;
+    onDescend: () => void;
+}
+
+/**
  * The hero's objective tree in Mistreevous' string definition format. The
  * selector resolves priorities: key first, then stairs, otherwise random
  * exploration. `interact` leads the key and stairs sequences as a
@@ -61,7 +72,9 @@ const worldToGrid = (world: number): number => world + (DUNGEON_SIZE - 1) / 2;
  * `world` defaults to the shared ECS world so the existing two-argument call
  * site in `Hero.tsx` keeps working. `seed` defaults to the dungeon default
  * seed; `Hero.tsx` passes the layout's seed so wander is reproducible per
- * depth, matching the project's deterministic-seed convention.
+ * depth, matching the project's deterministic-seed convention. `events` has
+ * no default: every call site must pass it, so the tree never reaches for
+ * the store.
  *
  * Mistreevous action leaves reject boolean results at runtime, so the
  * actions report State.SUCCEEDED/State.FAILED instead of true/false.
@@ -72,7 +85,8 @@ export function createHeroTree(
     navGraph: NavGraph,
     layoutCells: GridCell[],
     world: World<Entity> = ecsWorld,
-    seed: number = DUNGEON_DEFAULT_SEED
+    seed: number = DUNGEON_DEFAULT_SEED,
+    events: HeroTreeEvents
 ) {
     // The POI query is a live view of the world: entities added later (the
     // Step 6 spawners) are reflected without re-creating the query.
@@ -88,6 +102,8 @@ export function createHeroTree(
         position: new THREE.Vector3(),
         currentPath: [] as GridCell[],
         outputDirection: new THREE.Vector3(),
+        /** Human-readable intent for the in-world AI status label. */
+        activeState: 'Idle',
 
         hasKeyState: false,
         hasKey: () => blackboard.hasKeyState,
@@ -95,6 +111,7 @@ export function createHeroTree(
         needsDestination: () => blackboard.currentPath.length === 0,
 
         findDestination: () => {
+            blackboard.activeState = 'Wandering';
             const target = random.pick(layoutCells);
             const startX = Math.round(worldToGrid(blackboard.position.x));
             const startZ = Math.round(worldToGrid(blackboard.position.z));
@@ -128,12 +145,14 @@ export function createHeroTree(
         },
 
         findKey: () => {
+            blackboard.activeState = 'Seeking Key';
             const keyEntity = blackboard.nearestActivePoi('key');
             if (!keyEntity?.position) return State.FAILED;
             return blackboard.acquirePathTo(keyEntity.position);
         },
 
         findStairs: () => {
+            blackboard.activeState = 'Seeking Stairs';
             const stairsEntity = blackboard.nearestActivePoi('stairs');
             if (!stairsEntity?.position) return State.FAILED;
             return blackboard.acquirePathTo(stairsEntity.position);
@@ -153,7 +172,10 @@ export function createHeroTree(
         },
 
         moveAlongPath: () => {
-            if (blackboard.currentPath.length === 0) return State.FAILED;
+            if (blackboard.currentPath.length === 0) {
+                blackboard.activeState = 'Idle';
+                return State.FAILED;
+            }
 
             const nextNode = blackboard.currentPath[0];
             const targetPos = new THREE.Vector3(
@@ -182,9 +204,11 @@ export function createHeroTree(
                 const keyZ = Math.round(worldToGrid(keyEntity.position.z));
                 if (heroX === keyX && heroZ === keyZ) {
                     blackboard.hasKeyState = true;
-                    // The store is the canonical key state for the HUD and any
-                    // future systems; the blackboard copy drives the tree.
-                    useGameStore.getState().setHasKey(true);
+                    blackboard.activeState = 'Key Acquired';
+                    // The callback writes the canonical key state for the
+                    // HUD and any future systems; the blackboard copy drives
+                    // the tree.
+                    events.onKeyPickedUp();
                     world.update(keyEntity, { isActive: false });
                 }
             }
@@ -195,8 +219,9 @@ export function createHeroTree(
                     const stairsX = Math.round(worldToGrid(stairsEntity.position.x));
                     const stairsZ = Math.round(worldToGrid(stairsEntity.position.z));
                     if (heroX === stairsX && heroZ === stairsZ) {
+                        blackboard.activeState = 'Descending';
                         world.update(stairsEntity, { isActive: false });
-                        useGameStore.getState().descendToNextLevel();
+                        events.onDescend();
                     }
                 }
             }

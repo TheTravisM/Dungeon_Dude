@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { Html, Line } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody, useRapier, type RapierRigidBody } from '@react-three/rapier';
 import { damp, damp3, dampAngle } from 'maath/easing';
@@ -6,6 +8,7 @@ import * as THREE from 'three';
 import type { Vector3Tuple } from 'three';
 import { createHeroTree } from '../../game/ai/HeroTree';
 import { createHero, world } from '../../game/ecs';
+import { FLOOR_TOP, gridToWorld } from '../../game/dungeon/constants';
 import { getDungeonLayout } from '../../game/dungeon/getDungeonLayout';
 import { buildNavGraph } from '../../game/pathfinding';
 import { useGameStore } from '../../game/store';
@@ -60,6 +63,29 @@ const LOOK_AHEAD_FACTOR = SPEED * 0.5;
 const LOOK_AT_LEAD = 1;
 /** Torch anchor: the flame in the right hand, in body-local space. */
 const TORCH_ANCHOR: [number, number, number] = [0.38, 1.05, -0.02];
+/**
+ * Debug path height. The step contract used 0.85, but the walkable floor top
+ * is FLOOR_TOP (0.06); the extra 0.06 keeps the line visibly above the floor
+ * without leaving it floating at the hero's waist.
+ */
+const PATH_HEIGHT = FLOOR_TOP + 0.06;
+/**
+ * React state refresh interval for the AI label and path. The behavior tree
+ * mutates the blackboard outside React, so the UI samples it at 10 Hz instead
+ * of re-rendering on every physics frame.
+ */
+const AI_UI_INTERVAL = 0.1;
+
+/** Dark, readable status chip for the in-world AI label. */
+const AI_LABEL_STYLE: CSSProperties = {
+  background: 'rgba(0, 0, 0, 0.7)',
+  color: 'white',
+  padding: '4px 8px',
+  borderRadius: '4px',
+  fontFamily: 'monospace',
+  fontSize: '12px',
+  whiteSpace: 'nowrap',
+};
 
 /** Scratch vector so the frame loop does not allocate. */
 const scratchMove = new THREE.Vector3();
@@ -80,7 +106,13 @@ export default function Hero({ position }: HeroProps) {
   const torchRef = useRef<THREE.Group>(null);
   const headingRef = useRef({ y: INITIAL_HEADING });
   const entityRef = useRef<Entity | null>(null);
-  const { sample } = usePlayerInput();
+  const { sample, isAutoMode } = usePlayerInput();
+
+  // AI visualization state. The blackboard is mutated outside React, so these
+  // values are sampled in useFrame and stored for the label and debug line.
+  const [aiState, setAiState] = useState('Idle');
+  const [debugPath, setDebugPath] = useState<[number, number, number][]>([]);
+  const lastAiUiUpdateRef = useRef(0);
 
   // Kinematic character controller: the offset is a small stability gap, and
   // autostep stays disabled so the hero cannot climb the diorama walls.
@@ -113,7 +145,13 @@ export default function Hero({ position }: HeroProps) {
   const layout = useMemo(() => getDungeonLayout(currentDepth), [currentDepth]);
   const navGraph = useMemo(() => buildNavGraph(layout), [layout]);
   const ai = useMemo(
-    () => createHeroTree(navGraph, layout.floorCells, world, layout.seed),
+    () =>
+      createHeroTree(navGraph, layout.floorCells, world, layout.seed, {
+        // The tree stays store-free; the callbacks wire its side effects to
+        // the canonical HUD state.
+        onKeyPickedUp: () => useGameStore.getState().setHasKey(true),
+        onDescend: () => useGameStore.getState().descendToNextLevel(),
+      }),
     [navGraph, layout.floorCells, layout.seed]
   );
 
@@ -143,6 +181,24 @@ export default function Hero({ position }: HeroProps) {
     if (useGameStore.getState().isAutoMode) {
       ai.blackboard.position.copy(pos);
       ai.tree.step();
+
+      // Sample the blackboard at 10 Hz. Time based throttling avoids the
+      // contract snippet's bug: `floor(time * 10) % 2` stays true for a whole
+      // second and would trigger a React update on every frame.
+      if (state.clock.elapsedTime - lastAiUiUpdateRef.current >= AI_UI_INTERVAL) {
+        lastAiUiUpdateRef.current = state.clock.elapsedTime;
+        setAiState(ai.blackboard.activeState);
+        // currentPath is grid space; convert it to world space before the
+        // Line component sees it.
+        setDebugPath(
+          ai.blackboard.currentPath.map((node) => [
+            gridToWorld(node.x),
+            PATH_HEIGHT,
+            gridToWorld(node.z),
+          ])
+        );
+      }
+
       if (ai.blackboard.outputDirection.lengthSq() > 0) {
         moveDir = ai.blackboard.outputDirection;
       }
@@ -237,24 +293,41 @@ export default function Hero({ position }: HeroProps) {
     }
   });
   return (
-    <RigidBody
-      ref={bodyRef}
-      type="kinematicPosition"
-      colliders="cuboid"
-      canSleep={false}
-      lockRotations
-      position={position}
-    >
-      {/* Walk-cycle visual: bobs in Y and rotates toward the heading. */}
-      <group ref={visualRef} rotation={[0, INITIAL_HEADING, 0]}>
-        <HeroModel />
-      </group>
+    <>
+      <RigidBody
+        ref={bodyRef}
+        type="kinematicPosition"
+        colliders="cuboid"
+        canSleep={false}
+        lockRotations
+        position={position}
+      >
+        {/* Walk-cycle visual: bobs in Y and rotates toward the heading. */}
+        <group ref={visualRef} rotation={[0, INITIAL_HEADING, 0]}>
+          <HeroModel />
+        </group>
 
-      {/* Torch anchor: stable (no bob), rotates toward the heading. */}
-      <group ref={torchRef} position={TORCH_ANCHOR} rotation={[0, INITIAL_HEADING, 0]}>
-        <TorchLight />
-      </group>
-    </RigidBody>
+        {/* Torch anchor: stable (no bob), rotates toward the heading. */}
+        <group ref={torchRef} position={TORCH_ANCHOR} rotation={[0, INITIAL_HEADING, 0]}>
+          <TorchLight />
+        </group>
+
+        {/* AI intent label: follows the hero but ignores pointer events. */}
+        {isAutoMode && (
+          <Html position={[0, 2, 0]} center pointerEvents="none">
+            <div style={AI_LABEL_STYLE}>{aiState}</div>
+          </Html>
+        )}
+      </RigidBody>
+
+      {/*
+        Remaining AI path. This lives outside the RigidBody so it stays in
+        world space while the hero moves through the dungeon.
+      */}
+      {isAutoMode && debugPath.length > 1 && (
+        <Line color="cyan" dashed={false} lineWidth={2} points={debugPath} />
+      )}
+    </>
   );
 }
 
