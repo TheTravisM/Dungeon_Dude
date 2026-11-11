@@ -4,8 +4,9 @@ import type { Mesh, Object3D, PointLight, SpotLight } from 'three';
 import { useTorchFlicker } from '../../hooks/hero/useTorchFlicker';
 
 /**
- * Handheld torch effect: one shadow-casting spotlight, one shadowless warm
- * point fill, a tiny emissive flame, and rising embers.
+ * Handheld torch effect: one shadow-casting spotlight, one shadowless point
+ * fill, a tiny emissive flame, and rising embers. The light is a soft amber so
+ * it accents the cool stone instead of washing it toward red.
  *
  * Rendered inside the `torchHand` group, so it inherits the raised arm. The
  * spotlight target is a sibling in the same group (contract 6.6) and aims at
@@ -33,8 +34,8 @@ export default function HeroTorch() {
       <spotLight
         ref={spotRef}
         castShadow
-        color="#ffb25a"
-        intensity={70}
+        color="#ffcf9a"
+        intensity={46}
         angle={Math.PI / 2.4}
         penumbra={0.9}
         distance={14}
@@ -53,8 +54,8 @@ export default function HeroTorch() {
       {/* Soft fill only; never cast shadows here. */}
       <pointLight
         ref={glowRef}
-        color="#ff9a3c"
-        intensity={8}
+        color="#ffbe82"
+        intensity={5}
         distance={6}
         decay={2}
       />

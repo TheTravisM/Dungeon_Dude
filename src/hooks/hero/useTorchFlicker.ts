@@ -2,10 +2,10 @@ import type { RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { Mesh, PointLight, SpotLight } from 'three';
 
-/** Warm cone intensity before flicker. */
-const SPOT_BASE_INTENSITY = 70;
+/** Amber cone intensity before flicker. Kept low so it never tints walls red. */
+const SPOT_BASE_INTENSITY = 46;
 /** Soft fill intensity before flicker, deliberately much dimmer than the cone. */
-const GLOW_BASE_INTENSITY = 8;
+const GLOW_BASE_INTENSITY = 5;
 
 interface TorchFlickerOptions {
   spot: RefObject<SpotLight | null>;

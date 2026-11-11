@@ -1,18 +1,17 @@
 /**
- * Cool ambient fill keeps shadowed stone readable, while the warm key light
- * suggests torchlight from above. The torch spotlight is now the only
- * shadow-casting light; the key light is fill only.
- *
- * Final values after the 05-03 balance pass: ambient 1.1 * 0.6 = 0.66,
- * key 3.4 * 0.6 = 2.04.
+ * Cool scene lighting so the slate, blue, and purple stone reads as stone
+ * instead of warm brick. The directional key is a cold overhead fill that keeps
+ * wall relief readable; the ambient term lifts the deepest shadows without
+ * flattening the diorama. The torch is the only warm light left, and it is
+ * deliberately restrained so it accents the scene instead of tinting it.
  */
 export default function Lighting() {
   return (
     <>
-      <ambientLight color="#9db4d6" intensity={0.66} />
+      <ambientLight color="#9aa0b8" intensity={0.55} />
       <directionalLight
-        color="#ffb877"
-        intensity={2.04}
+        color="#c2cbdc"
+        intensity={1.65}
         position={[12, 18, 8]}
       />
     </>

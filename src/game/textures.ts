@@ -1,132 +1,145 @@
 import * as THREE from 'three';
+import {
+  createSlabs,
+  insetSlab,
+  SLAB_PALETTE,
+} from './slabPattern';
+import { createHeightField, createNormalMap, createRoughnessMap } from './stoneMaps';
+import {
+  configureTexture,
+  createSurface,
+  tint,
+  tracePath,
+} from './textureUtils';
 
-const STONE_SIZE = 512;
-const BUMP_SIZE = 256;
-const ROWS = 8;
-const COLS = 8;
+const ALBEDO_SIZE = 512;
+const MAP_SIZE = 256;
 
-interface Surface {
-  canvas: HTMLCanvasElement;
-  ctx: CanvasRenderingContext2D;
-}
-
-function createSurface(size: number): Surface | null {
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return null;
-
-  return { canvas, ctx };
-}
-
-/**
- * Visits every stone block in an offset brick grid. Rows alternate by half a
- * tile, and one extra column on each side keeps the pattern seamless when the
- * texture repeats.
- */
-function forEachBlock(
-  size: number,
-  gap: number,
-  paint: (x: number, y: number, width: number, height: number) => void
-): void {
-  const tileH = size / ROWS;
-  const tileW = size / COLS;
-
-  for (let row = 0; row < ROWS; row++) {
-    const offset = (row % 2) * (tileW / 2);
-    for (let col = -1; col < COLS + 1; col++) {
-      const x = col * tileW + offset;
-      const y = row * tileH;
-      paint(x + gap, y + gap, tileW - gap * 2, tileH - gap * 2);
-    }
-  }
-}
-
-function configureTexture(
-  texture: THREE.CanvasTexture,
-  colorSpace?: THREE.ColorSpace
-): THREE.CanvasTexture {
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(1, 1);
-  if (colorSpace) texture.colorSpace = colorSpace;
-  texture.needsUpdate = true;
-  return texture;
+/** Bounds of a slab in pixels, used to place cracks and gradients. */
+function bounds(points: ReadonlyArray<{ x: number; y: number }>) {
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  return {
+    minX: Math.min(...xs),
+    minY: Math.min(...ys),
+    maxX: Math.max(...xs),
+    maxY: Math.max(...ys),
+  };
 }
 
 /**
- * Generates the wall albedo map. Cool slate, deep purple, and midnight blue
- * blocks share a dark mortar bed. Per-block highlights, shadowed bottom edges,
- * and speckles keep torchlight from reading the surface as flat color.
+ * Cool slate, blue, and purple rough-hewn slabs over a dark mortar bed. Each
+ * slab is drawn as a dark beveled rim with a lighter raised face, so edges hold
+ * up against the normal map under low light.
  */
-export function createProceduralStoneTexture(): THREE.CanvasTexture | null {
-  const surface = createSurface(STONE_SIZE);
+function createAlbedoTexture(): THREE.CanvasTexture | null {
+  const surface = createSurface(ALBEDO_SIZE);
   if (!surface) return null;
 
   const { canvas, ctx } = surface;
+  ctx.fillStyle = '#0c1017';
+  ctx.fillRect(0, 0, ALBEDO_SIZE, ALBEDO_SIZE);
 
-  ctx.fillStyle = '#15181e';
-  ctx.fillRect(0, 0, STONE_SIZE, STONE_SIZE);
+  for (const slab of createSlabs(ALBEDO_SIZE)) {
+    const [r, g, b] = SLAB_PALETTE[slab.tone];
+    const factor = 0.8 + slab.variation * 0.4;
+    const { minX, minY, maxX, maxY } = bounds(slab.points);
 
-  forEachBlock(STONE_SIZE, 2, (x, y, width, height) => {
-    const choice = Math.random();
-    if (choice < 0.4) {
-      ctx.fillStyle = '#323746';
-    } else if (choice < 0.7) {
-      ctx.fillStyle = '#2b263d';
-    } else {
-      ctx.fillStyle = '#222d3d';
+    // Dark rim first, then the raised face inset inside it.
+    const rim = ctx.createLinearGradient(minX, minY, maxX, maxY);
+    rim.addColorStop(0, tint([r, g, b], factor * 0.98));
+    rim.addColorStop(1, tint([r, g, b], factor * 0.72));
+    tracePath(ctx, slab.points);
+    ctx.fillStyle = rim;
+    ctx.fill();
+
+    const face = insetSlab(slab.points, ALBEDO_SIZE * 0.018);
+    const grain = ctx.createLinearGradient(minX, minY, maxX, maxY);
+    grain.addColorStop(0, tint([r, g, b], factor * 1.14));
+    grain.addColorStop(0.55, tint([r, g, b], factor * 1.02));
+    grain.addColorStop(1, tint([r, g, b], factor * 0.92));
+    tracePath(ctx, face);
+    ctx.fillStyle = grain;
+    ctx.fill();
+
+    // Weathering stays inside the slab so mortar lines stay clean.
+    ctx.save();
+    tracePath(ctx, face);
+    ctx.clip();
+
+    for (let i = 0; i < 5; i++) {
+      const bx = minX + Math.random() * (maxX - minX);
+      const by = minY + Math.random() * (maxY - minY);
+      const radius = (0.12 + Math.random() * 0.22) * (maxX - minX);
+      const blotch = ctx.createRadialGradient(bx, by, 0, bx, by, radius);
+      blotch.addColorStop(
+        0,
+        i % 2 === 0 ? 'rgba(18, 26, 38, 0.16)' : 'rgba(198, 208, 228, 0.07)'
+      );
+      blotch.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = blotch;
+      ctx.fillRect(minX, minY, maxX - minX, maxY - minY);
     }
-    ctx.fillRect(x, y, width, height);
 
-    // A faint top highlight and dark lower edge give each block relief even
-    // before the bump map is applied.
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-    ctx.fillRect(x, y, width, 2);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
-    ctx.fillRect(x, y + height - 2, width, 2);
+    ctx.strokeStyle = 'rgba(7, 10, 16, 0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const crackX = minX + (maxX - minX) * (0.2 + slab.variation * 0.5);
+    const crackY = minY + (maxY - minY) * 0.2;
+    ctx.moveTo(crackX, crackY);
+    ctx.lineTo(
+      crackX + (Math.random() - 0.5) * (maxX - minX) * 0.35,
+      crackY + (maxY - minY) * 0.35
+    );
+    ctx.lineTo(
+      crackX + (Math.random() - 0.5) * (maxX - minX) * 0.45,
+      crackY + (maxY - minY) * 0.7
+    );
+    ctx.stroke();
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    for (let i = 0; i < 4; i++) {
-      const nx = x + Math.random() * width;
-      const ny = y + Math.random() * height;
-      ctx.fillRect(nx, ny, 3, 3);
+    for (let i = 0; i < 18; i++) {
+      const x = minX + Math.random() * (maxX - minX);
+      const y = minY + Math.random() * (maxY - minY);
+      ctx.fillStyle =
+        Math.random() < 0.5 ? 'rgba(8, 12, 18, 0.22)' : 'rgba(190, 205, 225, 0.08)';
+      ctx.fillRect(x, y, 2 + Math.random() * 4, 1 + Math.random() * 2);
     }
-  });
+    ctx.restore();
+
+    // Crisp seam line to separate neighbouring slabs.
+    tracePath(ctx, slab.points);
+    ctx.strokeStyle = 'rgba(5, 8, 13, 0.7)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  const image = ctx.getImageData(0, 0, ALBEDO_SIZE, ALBEDO_SIZE);
+  const data = image.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const noise = Math.round((Math.random() - 0.5) * 10);
+    data[i] += noise;
+    data[i + 1] += noise;
+    data[i + 2] += noise;
+  }
+  ctx.putImageData(image, 0, 0);
 
   const texture = new THREE.CanvasTexture(canvas);
   return configureTexture(texture, THREE.SRGBColorSpace);
 }
 
-/**
- * Generates the height map used as a bump map. Mortar joints stay black while
- * each block receives a slightly different gray level and small dark pits, so
- * the bump catches torchlight with a natural, uneven stone surface.
- */
-export function createProceduralBumpTexture(): THREE.CanvasTexture | null {
-  const surface = createSurface(BUMP_SIZE);
-  if (!surface) return null;
+export interface StoneTextures {
+  albedo: THREE.CanvasTexture | null;
+  normal: THREE.CanvasTexture | null;
+  roughness: THREE.CanvasTexture | null;
+}
 
-  const { canvas, ctx } = surface;
+/** Generates all wall maps from one deterministic slab layout. */
+export function createProceduralStoneTextures(): StoneTextures {
+  const height = createHeightField(MAP_SIZE);
 
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, BUMP_SIZE, BUMP_SIZE);
-
-  forEachBlock(BUMP_SIZE, 1, (x, y, width, height) => {
-    const shade = 140 + Math.floor(Math.random() * 50);
-    ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade})`;
-    ctx.fillRect(x, y, width, height);
-
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
-    for (let i = 0; i < 6; i++) {
-      const nx = x + Math.random() * width;
-      const ny = y + Math.random() * height;
-      ctx.fillRect(nx, ny, 2, 2);
-    }
-  });
-
-  const texture = new THREE.CanvasTexture(canvas);
-  return configureTexture(texture);
+  return {
+    albedo: createAlbedoTexture(),
+    normal: height ? createNormalMap(height, MAP_SIZE) : null,
+    roughness: height ? createRoughnessMap(height, MAP_SIZE) : null,
+  };
 }
