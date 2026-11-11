@@ -181,7 +181,7 @@ Status legend: `[ ]` open, `[x]` done.
 ### T9. Hero ECS registration effect ignores the `position` prop
 
 - **Priority:** P2 (one-frame ECS staleness on depth change; self-corrects)
-- **Status:** [ ]
+- **Status:** [x]
 - **Files:** `src/components/hero/Hero.tsx` (the `useEffect` that calls `createHero(`, with the `eslint-disable-next-line react-hooks/exhaustive-deps` comment)
 - **Current behavior:** The effect creates the ECS hero entity once with `[]` deps at the initial spawn. When depth changes, the `position` prop changes and the `RigidBody` teleports via its prop, but the entity keeps the old spawn for one frame (the per-frame ECS mirror then corrects it).
 - **Expected behavior:** The entity is recreated at the new spawn whenever the `position` prop changes; no eslint-disable.
@@ -341,6 +341,7 @@ The previous report flagged these; they were checked against the code and are co
 2026-11-10 — T3 done: IDLE_TIMEOUT_MS set to 4000 (user chose the README value); tsc/lint/vitest all pass.
 2026-11-10 — T2 done: self-hosted Press Start 2P latin woff2 in public/fonts with @font-face; removed the Google Fonts preconnects; CSP font-src now 'self' data: (user chose option A).
 2026-11-10 — T8 done: idle timestamp moved from module-level let into a useRef inside usePlayerInput; state added to the useCallback deps; lint is now 0 warnings.
+2026-11-10 — T9 done: Hero ECS registration effect now depends on the destructured spawn coordinates; eslint-disable removed; entity recreated at the new spawn on depth change.
 
 ---
 

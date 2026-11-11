@@ -117,21 +117,19 @@ export default function Hero({ position }: HeroProps) {
     [navGraph, layout.floorCells, layout.seed]
   );
 
-  // Register the hero in the ECS world for the lifetime of the component.
+  // The spawn coordinates as individual deps: the effect re-runs when the
+  // prop changes, so the entity is always created at the same spawn as the
+  // body, and the cleanup removes the previous entity.
+  const [spawnX, spawnY, spawnZ] = position;
   useEffect(() => {
-    const entity = createHero(
-      new THREE.Vector3(position[0], position[1], position[2])
-    );
+    const entity = createHero(new THREE.Vector3(spawnX, spawnY, spawnZ));
     world.update(entity, { isPlayer: true, heading: INITIAL_HEADING });
     entityRef.current = entity;
     return () => {
       world.remove(entity);
       entityRef.current = null;
     };
-    // The body teleports when the position prop changes; the entity is
-    // created at the same spawn and removed on unmount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [spawnX, spawnY, spawnZ]);
 
   useFrame((state, delta) => {
     const body = bodyRef.current;
