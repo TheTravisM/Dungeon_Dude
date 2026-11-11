@@ -2,7 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { Html, Line } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { RigidBody, useRapier, type RapierRigidBody } from '@react-three/rapier';
+import {
+  CapsuleCollider,
+  RigidBody,
+  useRapier,
+  type RapierCollider,
+  type RapierRigidBody,
+} from '@react-three/rapier';
 import { damp, damp3, dampAngle } from 'maath/easing';
 import * as THREE from 'three';
 import type { Vector3Tuple } from 'three';
@@ -44,23 +50,12 @@ const CHARACTER_CONTROLLER_OFFSET = 0.05;
  */
 const INITIAL_HEADING = -Math.PI * 0.75;
 /**
- * Camera offset from the hero, kept on the (1,1,1) diagonal so the damped
- * follow preserves the diorama's isometric angle. For an orthographic camera
- * the offset length only affects depth, never the zoom.
+ * Hero capsule: total height 1.3 units (2 * halfHeight + 2 * radius), radius
+ * 0.28 so it clears one-tile corridors, with its bottom at the feet.
  */
-const CAMERA_OFFSET: [number, number, number] = [10, 10, 10];
-/**
- * Cinematic look-ahead (05-07-01): how far in front of the hero the camera
- * target leads along the current movement direction, in world units.
- * Derived from SPEED so the lead stays proportional if walk speed changes.
- */
-const LOOK_AHEAD_FACTOR = SPEED * 0.5;
-/**
- * Cinematic look-at lead (05-07-01 follow-up): how far in front of the hero
- * the camera aims while it moves, in world units; idle it settles back on
- * the hero.
- */
-const LOOK_AT_LEAD = 1;
+const HERO_CAPSULE_HALF_HEIGHT = 0.37;
+const HERO_CAPSULE_RADIUS = 0.28;
+const HERO_CAPSULE_Y = HERO_CAPSULE_HALF_HEIGHT + HERO_CAPSULE_RADIUS;
 /** Torch anchor: the flame in the right hand, in body-local space. */
 const TORCH_ANCHOR: [number, number, number] = [0.38, 1.05, -0.02];
 /**
@@ -92,16 +87,19 @@ const scratchMove = new THREE.Vector3();
 
 /**
  * Playable hero: a kinematic rigid body driven by player input, the visual
- * model, the stable torch spotlight, and the isometric camera follow. The
- * ECS entity mirrors the body so AI and debug systems can read the player
- * without touching the physics world.
+ * model, the stable torch spotlight, and the ECS mirror. The isometric camera
+ * is fixed separately by IsometricCamera, so the dungeon does not swim while
+ * the hero moves. The ECS entity mirrors the body so AI and debug systems can
+ * read the player without touching the physics world.
  *
  * The body itself never rotates. The heading is applied to the walk-cycle
- * group and the torch anchor, which keeps the auto-generated cuboid collider
- * axis aligned and the spotlight free of the walk-cycle bob.
+ * group and the torch anchor, which keeps the explicit capsule collider axis
+ * aligned and the spotlight free of the walk-cycle bob. The camera stays
+ * fixed: moving it every frame made the whole floor swim.
  */
 export default function Hero({ position }: HeroProps) {
   const bodyRef = useRef<RapierRigidBody>(null);
+  const colliderRef = useRef<RapierCollider>(null);
   const visualRef = useRef<THREE.Group>(null);
   const torchRef = useRef<THREE.Group>(null);
   const headingRef = useRef({ y: INITIAL_HEADING });
@@ -180,6 +178,8 @@ export default function Hero({ position }: HeroProps) {
     let moveDir: THREE.Vector3 | null = null;
     if (useGameStore.getState().isAutoMode) {
       ai.blackboard.position.copy(pos);
+      ai.blackboard.delta = delta;
+      ai.blackboard.elapsedTime = state.clock.elapsedTime;
       ai.tree.step();
 
       // Sample the blackboard at 10 Hz. Time based throttling avoids the
@@ -208,7 +208,10 @@ export default function Hero({ position }: HeroProps) {
 
     if (moveDir) {
       const move = scratchMove.copy(moveDir).multiplyScalar(SPEED * delta);
-      const collider = body.collider(0);
+      // Use the explicit capsule rather than auto-generated mesh colliders:
+      // `body.collider(0)` used to pick one boot mesh, so the body's real
+      // center sat beside the collider and the hero clipped through walls.
+      const collider = colliderRef.current;
       const cc = characterControllerRef.current;
       if (collider && cc) {
         // Compute safe movement: the character controller slides the hero
@@ -256,29 +259,9 @@ export default function Hero({ position }: HeroProps) {
       }
     }
 
-    // 4. Cinematic camera follow with velocity look-ahead (05-07-01): the
-    //    target is the isometric offset plus a push in the movement
-    //    direction, so the view leads the hero while it walks and settles
-    //    back behind it when it stops. The array target keeps damp3
-    //    allocation-free.
-    const lookAheadX = moveDir ? moveDir.x * LOOK_AHEAD_FACTOR : 0;
-    const lookAheadZ = moveDir ? moveDir.z * LOOK_AHEAD_FACTOR : 0;
-    damp3(
-      state.camera.position,
-      [
-        pos.x + CAMERA_OFFSET[0] + lookAheadX,
-        pos.y + CAMERA_OFFSET[1],
-        pos.z + CAMERA_OFFSET[2] + lookAheadZ,
-      ],
-      0.2,
-      delta
-    );
-    // The look point leads the hero by LOOK_AT_LEAD while it moves, so the
-    // view frames more of the path ahead; when idle it settles back on the
-    // hero.
-    const lookLeadX = moveDir ? moveDir.x * LOOK_AT_LEAD : 0;
-    const lookLeadZ = moveDir ? moveDir.z * LOOK_AT_LEAD : 0;
-    state.camera.lookAt(pos.x + lookLeadX, pos.y, pos.z + lookLeadZ);
+    // 4. The camera is intentionally fixed by IsometricCamera. Following the
+    //    hero and leading the look direction translated the whole diorama
+    //    every frame, which read as motion sickness rather than movement.
 
     // 5. Mirror the body into the ECS entity for AI and debug systems.
     const entity = entityRef.current;
@@ -297,11 +280,20 @@ export default function Hero({ position }: HeroProps) {
       <RigidBody
         ref={bodyRef}
         type="kinematicPosition"
-        colliders="cuboid"
+        colliders={false}
         canSleep={false}
         lockRotations
         position={position}
       >
+        {/* One explicit capsule for the whole hero. Auto-generated cuboids
+            produced one collider per mesh, so the character controller only
+            respected a single boot. */}
+        <CapsuleCollider
+          ref={colliderRef}
+          args={[HERO_CAPSULE_HALF_HEIGHT, HERO_CAPSULE_RADIUS]}
+          position={[0, HERO_CAPSULE_Y, 0]}
+        />
+
         {/* Walk-cycle visual: bobs in Y and rotates toward the heading. */}
         <group ref={visualRef} rotation={[0, INITIAL_HEADING, 0]}>
           <HeroModel />

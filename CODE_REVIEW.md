@@ -132,7 +132,7 @@ Status legend: `[ ]` open, `[x]` done.
 ### T5. Decouple the behavior tree from the Zustand store
 
 - **Priority:** P1 (architecture: the AI module imports React-store code)
-- **Status:** [ ]
+- **Status:** [x]
 - **Files:** `src/game/ai/HeroTree.ts` (line 9 import, lines 187 and 199), `src/components/hero/Hero.tsx` (the `createHeroTree(...)` call in the `useMemo`), `tests/herotree.test.ts`
 - **Current behavior:** The `interact` action writes to the store directly: line 187 `useGameStore.getState().setHasKey(true)` and line 199 `useGameStore.getState().descendToNextLevel()`. `HeroTree.ts` imports `useGameStore` from `../store`; the tests import the store and assert on its state (`useGameStore.getState().hasKey`, `.currentDepth`).
 - **Expected behavior:** `createHeroTree` is pure with respect to React: it receives event callbacks and never imports the store. The store stays the canonical HUD state; the hero component wires the callbacks to it.
@@ -343,6 +343,7 @@ The previous report flagged these; they were checked against the code and are co
 2026-11-10 — T8 done: idle timestamp moved from module-level let into a useRef inside usePlayerInput; state added to the useCallback deps; lint is now 0 warnings.
 2026-11-10 — T9 done: Hero ECS registration effect now depends on the destructured spawn coordinates; eslint-disable removed; entity recreated at the new spawn on depth change.
 2026-11-10 — T10 done: Step 5 checkboxes reconciled with the code (user chose full reconciliation: the 4 deleted rows restored as [x], 5.06/5.07 ticked, 5.08/5.09 left open with a note).
+2026-11-10 — T5 done: createHeroTree is store-free via a required HeroTreeEvents param (onKeyPickedUp/onDescend); Hero.tsx wires the callbacks to the store; tests assert callback counts instead of store state; 17/17 pass. (Commit also carries in-flight 05-08/bug-fix changes in the three shared files, per user choice; AI_HANDOFF.md + useTorchFlicker.ts left uncommitted.)
 
 ---
 

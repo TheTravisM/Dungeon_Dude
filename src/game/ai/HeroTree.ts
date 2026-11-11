@@ -6,7 +6,6 @@ import { DUNGEON_DEFAULT_SEED, DUNGEON_SIZE, gridToWorld } from '../dungeon/cons
 import { createRandom } from '../dungeon/random';
 import type { NavGraph } from '../pathfinding';
 import { world as ecsWorld } from '../ecs';
-import { useGameStore } from '../store';
 
 /**
  * Store-side effects the tree fires instead of touching the Zustand store
@@ -64,6 +63,15 @@ root {
  */
 const worldToGrid = (world: number): number => world + (DUNGEON_SIZE - 1) / 2;
 
+/** Path requests are capped at 4 Hz so failed or unreachable goals cannot spam A*. */
+const MIN_REPLAN_INTERVAL = 0.25;
+
+/** Seconds without meaningful position progress before stuck recovery fires. */
+const STUCK_TIMEOUT_SECONDS = 1.5;
+
+/** Squared distance below which the hero is treated as stationary. */
+const STUCK_PROGRESS_EPSILON_SQ = 0.02 * 0.02;
+
 /**
  * Creates the hero's auto-pilot behaviour tree. The blackboard is the
  * Mistreevous agent: the tree reads and mutates it, and its named functions
@@ -105,18 +113,54 @@ export function createHeroTree(
         /** Human-readable intent for the in-world AI status label. */
         activeState: 'Idle',
 
+        // Navigation clocks and progress tracking. Hero.tsx writes `delta` and
+        // `elapsedTime` each frame; the defaults keep the tree testable.
+        delta: 1 / 60,
+        elapsedTime: 0,
+        lastReplanTime: Number.NEGATIVE_INFINITY,
+        lastProgress: new THREE.Vector3(),
+        stuckTime: 0,
+        fallbackIndex: 0,
+
+        /** True when the pathfinding cooldown has elapsed. */
+        canReplan: () =>
+            blackboard.elapsedTime - blackboard.lastReplanTime >= MIN_REPLAN_INTERVAL,
+        /** Marks the moment a path request was accepted. */
+        markReplanned: () => {
+            blackboard.lastReplanTime = blackboard.elapsedTime;
+        },
+        /** Resets progress tracking for a fresh waypoint or route. */
+        resetProgress: () => {
+            blackboard.lastProgress.copy(blackboard.position);
+            blackboard.stuckTime = 0;
+        },
+
         hasKeyState: false,
         hasKey: () => blackboard.hasKeyState,
         needsKey: () => !blackboard.hasKeyState,
         needsDestination: () => blackboard.currentPath.length === 0,
 
         findDestination: () => {
+            if (!blackboard.canReplan()) return State.FAILED;
+
             blackboard.activeState = 'Wandering';
-            const target = random.pick(layoutCells);
             const startX = Math.round(worldToGrid(blackboard.position.x));
             const startZ = Math.round(worldToGrid(blackboard.position.z));
+            let target = random.pick(layoutCells);
+
+            // Never waste a 4 Hz path request on the cell the hero already
+            // occupies. With more than one walkable cell, advance to the next
+            // deterministic cell in layout order.
+            if (target.x === startX && target.z === startZ && layoutCells.length > 1) {
+                const currentIndex = layoutCells.findIndex(
+                    (cell) => cell.x === startX && cell.z === startZ
+                );
+                target = layoutCells[(currentIndex + 1) % layoutCells.length];
+            }
 
             blackboard.currentPath = navGraph.findPath(startX, startZ, target.x, target.z);
+            blackboard.markReplanned();
+            blackboard.resetProgress();
             return blackboard.currentPath.length > 0 ? State.SUCCEEDED : State.FAILED;
         },
 
@@ -159,6 +203,8 @@ export function createHeroTree(
         },
 
         acquirePathTo: (worldPos: THREE.Vector3) => {
+            if (!blackboard.canReplan()) return State.FAILED;
+
             const startX = Math.round(worldToGrid(blackboard.position.x));
             const startZ = Math.round(worldToGrid(blackboard.position.z));
 
@@ -168,7 +214,44 @@ export function createHeroTree(
                 Math.round(worldToGrid(worldPos.x)),
                 Math.round(worldToGrid(worldPos.z))
             );
+            blackboard.markReplanned();
+            blackboard.resetProgress();
             return blackboard.currentPath.length > 0 ? State.SUCCEEDED : State.FAILED;
+        },
+
+        /**
+         * Deterministic stuck recovery: scan layoutCells from a rotating index
+         * and take the first reachable goal that is not the hero's current
+         * cell. This avoids Math.random and guarantees the same fallback order
+         * for the same floor and stuck sequence.
+         */
+        recoverFromStuck: () => {
+            blackboard.outputDirection.set(0, 0, 0);
+            blackboard.currentPath = [];
+            blackboard.stuckTime = 0;
+
+            const heroX = Math.round(worldToGrid(blackboard.position.x));
+            const heroZ = Math.round(worldToGrid(blackboard.position.z));
+            const cellCount = layoutCells.length;
+
+            for (let offset = 0; offset < cellCount; offset++) {
+                const index = (blackboard.fallbackIndex + offset) % cellCount;
+                const cell = layoutCells[index];
+                if (cell.x === heroX && cell.z === heroZ) continue;
+
+                const path = navGraph.findPath(heroX, heroZ, cell.x, cell.z);
+                if (path.length > 1) {
+                    blackboard.fallbackIndex = (index + 1) % cellCount;
+                    blackboard.currentPath = path;
+                    blackboard.activeState = 'Recovering';
+                    blackboard.markReplanned();
+                    blackboard.resetProgress();
+                    return true;
+                }
+            }
+
+            blackboard.activeState = 'Idle';
+            return false;
         },
 
         moveAlongPath: () => {
@@ -188,9 +271,26 @@ export function createHeroTree(
             if (dist < 0.1) {
                 blackboard.currentPath.shift(); // Reached node, pop it
                 blackboard.outputDirection.set(0, 0, 0);
-            } else {
-                blackboard.outputDirection.subVectors(targetPos, blackboard.position).normalize();
+                blackboard.resetProgress();
+                return State.SUCCEEDED;
             }
+
+            // Stuck detection: if the body stops making progress toward the
+            // next waypoint while a movement direction is active, replan to a
+            // deterministic fallback goal instead of pushing a wall forever.
+            const movedSq = blackboard.position.distanceToSquared(blackboard.lastProgress);
+            if (movedSq >= STUCK_PROGRESS_EPSILON_SQ) {
+                blackboard.lastProgress.copy(blackboard.position);
+                blackboard.stuckTime = 0;
+            } else {
+                blackboard.stuckTime += Math.max(blackboard.delta, 0);
+                if (blackboard.stuckTime >= STUCK_TIMEOUT_SECONDS) {
+                    blackboard.recoverFromStuck();
+                    return State.SUCCEEDED;
+                }
+            }
+
+            blackboard.outputDirection.subVectors(targetPos, blackboard.position).normalize();
             return State.SUCCEEDED;
         },
 
