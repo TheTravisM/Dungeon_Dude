@@ -8,6 +8,7 @@ import {
 } from '../../game/combat/damageNumbers';
 
 const TEXT_STYLE: CSSProperties = {
+  display: 'none',
   fontFamily: 'var(--font-pixel)',
   fontSize: 10,
   lineHeight: 1,

@@ -11,7 +11,6 @@ import type { MonsterRig } from './Monster';
 const WHITE = new Color('#ffffff');
 const TELEGRAPH = new Color('#ff2a10');
 const TELEGRAPH_MIX = 0.85;
-const SWELL = 0.12;
 const LUNGE = 0.15;
 /** Scratch color reused for every material to avoid per-frame allocation. */
 const scratch = new Color();
