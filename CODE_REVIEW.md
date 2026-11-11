@@ -192,7 +192,7 @@ Status legend: `[ ]` open, `[x]` done.
 ### T10. Reconcile `docs/steps/INDEX.md` Step 5 checkboxes with the code
 
 - **Priority:** P2 (docs accuracy for future handoffs)
-- **Status:** [ ]
+- **Status:** [x]
 - **Files:** `docs/steps/INDEX.md`
 - **Current behavior:** Step 5 micro-steps are mostly `[ ]` even though the code implements the hero, torch, behavior tree, character-controller movement, WASD override, pathfinding, POI interaction, and both test files.
 - **Expected behavior:** Checkboxes reflect reality: implemented micro-steps are `[x]`; genuinely incomplete ones (e.g. stuck recovery, final acceptance) stay `[ ]` with a note.
@@ -342,6 +342,7 @@ The previous report flagged these; they were checked against the code and are co
 2026-11-10 — T2 done: self-hosted Press Start 2P latin woff2 in public/fonts with @font-face; removed the Google Fonts preconnects; CSP font-src now 'self' data: (user chose option A).
 2026-11-10 — T8 done: idle timestamp moved from module-level let into a useRef inside usePlayerInput; state added to the useCallback deps; lint is now 0 warnings.
 2026-11-10 — T9 done: Hero ECS registration effect now depends on the destructured spawn coordinates; eslint-disable removed; entity recreated at the new spawn on depth change.
+2026-11-10 — T10 done: Step 5 checkboxes reconciled with the code (user chose full reconciliation: the 4 deleted rows restored as [x], 5.06/5.07 ticked, 5.08/5.09 left open with a note).
 
 ---
 
