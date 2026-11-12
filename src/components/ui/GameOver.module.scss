@@ -40,9 +40,9 @@
 
 .subtitle {
   max-width: 26rem;
-  font-size: clamp(0.55rem, 1.6cqw, 0.75rem);
+  font-size: clamp(0.65rem, 1.7cqw, 0.8rem);
   line-height: 1.8;
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(255, 255, 255, 0.68);
 }
 
 .summary {
@@ -63,11 +63,11 @@
 }
 
 .label {
-  font-size: clamp(0.45rem, 1.3cqw, 0.6rem);
+  font-size: clamp(0.6rem, 1.6cqw, 0.7rem);
   line-height: 1.5;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .value {
@@ -87,7 +87,7 @@
 
 .button {
   font-family: inherit;
-  font-size: clamp(0.55rem, 1.7cqw, 0.8rem);
+  font-size: clamp(0.65rem, 1.8cqw, 0.85rem);
   padding: clamp(0.75rem, 2vw, 1rem) clamp(1.2rem, 3.4vw, 2rem);
   border-radius: 6px;
   letter-spacing: 0.08em;
@@ -139,6 +139,20 @@
 
   &:active {
     box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+  }
+}
+
+/**
+ * Narrow viewport: stacked, full-width actions are easier to hit and stop the
+ * two pixel-font labels from competing for one line.
+ */
+@container (max-width: 24rem) {
+  .actions {
+    width: 100%;
+  }
+
+  .button {
+    flex: 1 1 100%;
   }
 }
 

@@ -20,12 +20,20 @@ export default function GameOver() {
   }, []);
 
   return (
-    <section className={styles.overlay} aria-labelledby="game-over-title">
+    <section
+      className={styles.overlay}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="game-over-title"
+      aria-describedby="game-over-subtitle"
+    >
       <div className={styles.panel}>
         <h1 id="game-over-title" className={styles.title}>
           Game Over
         </h1>
-        <p className={styles.subtitle}>The dungeon claims another adventurer.</p>
+        <p id="game-over-subtitle" className={styles.subtitle}>
+          The dungeon claims another adventurer.
+        </p>
 
         <dl className={styles.summary}>
           <div className={styles.stat}>

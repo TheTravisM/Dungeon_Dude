@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { commitScreenEvent } from '../../game/ui/screenTransition';
 import { resetRunState } from '../../game/ui/runSession';
 import styles from './MainMenu.module.scss';
@@ -8,6 +9,14 @@ import styles from './MainMenu.module.scss';
  * the screen change, then hands off to the transition helper.
  */
 export default function MainMenu() {
+  const enterRef = useRef<HTMLButtonElement>(null);
+
+  // Returning from Game Over unmounts the previous screen's actions, so the
+  // menu takes focus explicitly instead of dropping it on the document.
+  useEffect(() => {
+    enterRef.current?.focus();
+  }, []);
+
   return (
     <section className={styles.menu} aria-labelledby="main-menu-title">
       <div className={styles.panel}>
@@ -15,6 +24,7 @@ export default function MainMenu() {
           Dungeon Dude
         </h1>
         <button
+          ref={enterRef}
           type="button"
           className={styles.enter}
           onClick={() =>

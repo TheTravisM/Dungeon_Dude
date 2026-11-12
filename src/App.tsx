@@ -23,6 +23,7 @@ import Lighting from './components/scene/Lighting';
 import MainMenu from './components/ui/MainMenu';
 import HUD from './components/ui/HUD';
 import GameOver from './components/ui/GameOver';
+import ScreenAnnouncer from './components/ui/ScreenAnnouncer';
 import { getDungeonLayout } from './game/dungeon/getDungeonLayout';
 import { useGameStore } from './game/store';
 import { useScreenStore } from './game/ui/screenStore';
@@ -89,6 +90,7 @@ export default function App() {
       )}
 
       <div className={styles.uiLayer}>
+        <ScreenAnnouncer />
         {screen === 'mainMenu' && <MainMenu />}
         {screen === 'gameOver' && <GameOver />}
         {screen === 'playing' && (

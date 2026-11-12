@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { useGameStore } from '../../game/store';
 import {
   getHeroVitals,
@@ -48,6 +48,13 @@ export default function HUD() {
   );
   const gold = useGameStore((state) => state.goldCollected);
   const depth = useGameStore((state) => state.currentDepth);
+  const hudRef = useRef<HTMLElement>(null);
+
+  // The menu button and Game Over actions unmount on transition, so focus would
+  // otherwise fall back to the document. The HUD is the logical landing point.
+  useEffect(() => {
+    hudRef.current?.focus();
+  }, []);
 
   const hasHero = vitals.hasHero && vitals.maxHealth > 0;
   const health = hasHero ? Math.max(0, Math.round(vitals.health)) : 0;
@@ -56,7 +63,12 @@ export default function HUD() {
   const healthText = hasHero ? `${health} / ${maxHealth}` : '—';
 
   return (
-    <aside className={styles.hud} aria-label="Hero status">
+    <aside
+      ref={hudRef}
+      className={styles.hud}
+      aria-label="Hero status"
+      tabIndex={-1}
+    >
       <div
         className={styles.health}
         role="group"
@@ -66,13 +78,7 @@ export default function HUD() {
           Health
         </span>
         <Hearts fraction={healthFraction(vitals)} />
-        <span
-          className={styles.healthValue}
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          {healthText}
-        </span>
+        <span className={styles.healthValue}>{healthText}</span>
         {dead && <span className={styles.fallen}>Fallen</span>}
       </div>
 
