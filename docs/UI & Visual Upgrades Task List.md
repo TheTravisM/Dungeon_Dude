@@ -1,5 +1,9 @@
 # UI & Visual Upgrades Task List (Prioritized)
 
+> **Superseded.** The canonical, codebase-verified tracking list now lives in
+> `visual_improvements.md` at the repo root. Keep this file only as historical
+> reference.
+
 ## 1. Physically Based Rendering (PBR) & Normal Mapping
 - **Impact:** Highest (Transforms flat colored blocks into detailed, tactile stone, wood, and brick with zero extra geometry).
 - **Libraries/Assets:** Utilize `@react-three/drei`'s built-in hooks and pull free 2K PBR texture sets from Poly Haven (e.g., "Castle Brick Floor" or "Worn Stone Wall").

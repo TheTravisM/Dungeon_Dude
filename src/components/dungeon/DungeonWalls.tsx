@@ -11,7 +11,7 @@ import { getWallInstanceData } from '../../game/dungeon/wallInstances';
 import {
   configureDungeonWallTextures,
   createDungeonWallMaterial,
-} from '../environment/WallShaderMaterial';
+} from '../environment/DungeonWallPbrMaterial';
 
 interface DungeonWallsProps {
   layout: DungeonLayout;
@@ -26,9 +26,7 @@ interface WallBatchProps {
 
 /** Builds the 1-segment wall box; the shader does all relief in-fragment. */
 function createWallGeometry(height: number): THREE.BoxGeometry {
-  const geometry = new THREE.BoxGeometry(WALL_THICKNESS, height, WALL_THICKNESS);
-  geometry.setAttribute('uv2', geometry.getAttribute('uv'));
-  return geometry;
+  return new THREE.BoxGeometry(WALL_THICKNESS, height, WALL_THICKNESS);
 }
 
 /**
@@ -72,10 +70,10 @@ function WallBatch({ matrices, count, height, material }: WallBatchProps) {
 export default function DungeonWalls({ layout }: DungeonWallsProps) {
   const instances = getWallInstanceData(layout);
   const [albedoMap, normalMap, roughnessMap, aoMap] = useTexture([
-    '/assets/textures/stone_brick_wall_001_diff_2k.jpg',
-    '/assets/textures/stone_brick_wall_001_nor_gl_2k.jpg',
-    '/assets/textures/stone_brick_wall_001_rough_2k.jpg',
-    '/assets/textures/stone_brick_wall_001_ao_2k.jpg',
+    '/assets/textures/floor_bricks_02_diff_2k.jpg',
+    '/assets/textures/floor_bricks_02_nor_gl_2k.jpg',
+    '/assets/textures/floor_bricks_02_rough_2k.jpg',
+    '/assets/textures/floor_bricks_02_ao_2k.jpg',
   ]);
 
   const wallMaterial = useMemo(() => {
