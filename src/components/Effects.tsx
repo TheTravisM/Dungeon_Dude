@@ -1,4 +1,10 @@
-import { EffectComposer, Noise, TiltShift, Vignette } from '@react-three/postprocessing';
+import {
+  EffectComposer,
+  Noise,
+  SSAO,
+  TiltShift,
+  Vignette,
+} from '@react-three/postprocessing';
 import { BlendFunction, KernelSize } from 'postprocessing';
 import { Dither } from './effects/Dither';
 
@@ -10,16 +16,23 @@ import { Dither } from './effects/Dither';
 const EFFECTS_ENABLED = true;
 
 /**
- * Order matters. Tilt shift blurs first so the dither pattern stays crisp,
- * then grain adds analog texture, and the vignette frames the diorama last.
- * Blend functions are passed explicitly because the library wrappers use
- * sentinel defaults that can otherwise skip an effect entirely.
+ * Ambient occlusion grounds geometry before the stylized blur, dither, grain,
+ * and vignette passes. SSAO runs at half resolution with a bounded sample
+ * count to control its cost on GPUs below the primary RTX 3090 target.
  */
 export default function Effects() {
   if (!EFFECTS_ENABLED) return null;
 
   return (
-    <EffectComposer multisampling={4}>
+    <EffectComposer enableNormalPass multisampling={4}>
+      <SSAO
+        samples={16}
+        rings={3}
+        intensity={1.5}
+        radius={0.4}
+        bias={0.02}
+        resolutionScale={0.5}
+      />
       <TiltShift
         blendFunction={BlendFunction.NORMAL}
         offset={0}

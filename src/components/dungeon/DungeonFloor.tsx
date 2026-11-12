@@ -1,11 +1,16 @@
-import { useLayoutEffect, useRef } from 'react';
-import type { InstancedMesh } from 'three';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useTexture } from '@react-three/drei';
+import * as THREE from 'three';
 import type { DungeonLayout } from '../../types';
 import { FLOOR_TILE_HEIGHT } from '../../game/dungeon/constants';
 import {
   FLOOR_INSTANCE_STRIDE,
   getFloorInstanceMatrices,
 } from '../../game/dungeon/floorInstances';
+import {
+  configureDungeonFloorTextures,
+  createDungeonFloorMaterial,
+} from '../environment/DungeonFloorMaterial';
 
 interface DungeonFloorProps {
   layout: DungeonLayout;
@@ -18,8 +23,25 @@ interface DungeonFloorProps {
  * into the instance buffer once per layout.
  */
 export default function DungeonFloor({ layout }: DungeonFloorProps) {
-  const meshRef = useRef<InstancedMesh>(null);
+  const meshRef = useRef<THREE.InstancedMesh>(null);
   const matrices = getFloorInstanceMatrices(layout);
+  const [albedoMap, normalMap, roughnessMap, aoMap] = useTexture([
+    '/assets/textures/floor_bricks_02_diff_2k.jpg',
+    '/assets/textures/floor_bricks_02_nor_gl_2k.jpg',
+    '/assets/textures/floor_bricks_02_rough_2k.jpg',
+    '/assets/textures/floor_bricks_02_ao_2k.jpg',
+  ]);
+  const floorMaterial = useMemo(() => {
+    configureDungeonFloorTextures(albedoMap, normalMap, roughnessMap, aoMap);
+    return createDungeonFloorMaterial(albedoMap, normalMap, roughnessMap, aoMap);
+  }, [albedoMap, normalMap, roughnessMap, aoMap]);
+  const geometry = useMemo(() => {
+    const boxGeometry = new THREE.BoxGeometry(1, FLOOR_TILE_HEIGHT, 1);
+    boxGeometry.setAttribute('uv2', boxGeometry.getAttribute('uv'));
+    return boxGeometry;
+  }, []);
+
+  useEffect(() => () => floorMaterial.dispose(), [floorMaterial]);
 
   useLayoutEffect(() => {
     const mesh = meshRef.current;
@@ -35,13 +57,8 @@ export default function DungeonFloor({ layout }: DungeonFloorProps) {
   return (
     <instancedMesh
       ref={meshRef}
-      args={[undefined, undefined, layout.floorCells.length]}
+      args={[geometry, floorMaterial, layout.floorCells.length]}
       receiveShadow
-    >
-      {/* Unit box: the per-instance matrix applies the FLOOR_TILE_INSET scale,
-          so the inset must not be baked into the geometry (double-inset). */}
-      <boxGeometry args={[1, FLOOR_TILE_HEIGHT, 1]} />
-      <meshStandardMaterial color="#3c4a60" roughness={0.95} metalness={0.05} />
-    </instancedMesh>
+    />
   );
 }

@@ -1,19 +1,54 @@
 import * as THREE from 'three';
 
 /**
+ * Configures the shared wall PBR maps for repeatable, mipmapped sampling.
+ */
+export function configureDungeonWallTextures(
+  albedoMap: THREE.Texture,
+  normalMap: THREE.Texture,
+  roughnessMap: THREE.Texture,
+  aoMap: THREE.Texture
+): void {
+  for (const texture of [albedoMap, normalMap, roughnessMap, aoMap]) {
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.generateMipmaps = true;
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.anisotropy = 4;
+  }
+
+  albedoMap.colorSpace = THREE.SRGBColorSpace;
+  normalMap.colorSpace = THREE.NoColorSpace;
+  roughnessMap.colorSpace = THREE.NoColorSpace;
+  aoMap.colorSpace = THREE.NoColorSpace;
+}
+
+/**
  * Creates a PBR-compliant MeshStandardMaterial customized with triplanar
- * irregular stone patterns and steep normal perturbation.
+ * irregular stone patterns and textured albedo, normal, roughness, and AO maps.
  *
  * The material hooks Three.js's standard PBR shader via `onBeforeCompile`
  * instead of using a raw ShaderMaterial, so every native scene light (torch
  * point lights, directional lights, ambient) and the shadow pipeline
  * illuminate the wall through the usual `lights_fragment` loops.
  */
-export function createDungeonWallMaterial(): THREE.MeshStandardMaterial {
+export function createDungeonWallMaterial(
+  albedoMap: THREE.Texture,
+  normalMap: THREE.Texture,
+  roughnessMap: THREE.Texture,
+  aoMap: THREE.Texture
+): THREE.MeshStandardMaterial {
   const material = new THREE.MeshStandardMaterial({
-    color: new THREE.Color('#14171A'),
+    color: new THREE.Color('#ffffff'),
+    map: albedoMap,
+    normalMap,
+    normalScale: new THREE.Vector2(0.55, 0.55),
+    roughnessMap,
+    aoMap,
+    aoMapIntensity: 0.8,
     roughness: 0.85,
-    metalness: 0.1,
+    metalness: 0.03,
   });
 
   // Uniforms for stone color variations and bump controls
@@ -196,7 +231,8 @@ export function createDungeonWallMaterial(): THREE.MeshStandardMaterial {
         customStoneBaseColor = mix( uCharcoalColor, uDarkPurpleColor, 0.65 );
       }
 
-      vec3 customStoneSurface = customStoneBaseColor * ( 0.7 + 0.5 * customMicroGrit );
+      vec3 customTextureAlbedo = texture2D( map, vMapUv ).rgb;
+      vec3 customStoneSurface = mix( customStoneBaseColor, customTextureAlbedo, 0.62 ) * ( 0.7 + 0.5 * customMicroGrit );
       vec3 customCalculatedAlbedo = mix( uCreviceColor, customStoneSurface, customCreviceMask );
 
       // Feed computed color into standard Three.js PBR diffuse color
@@ -206,12 +242,12 @@ export function createDungeonWallMaterial(): THREE.MeshStandardMaterial {
       // scatters differently across each stone face instead of reading flat
       roughnessFactor = clamp( roughnessFactor + ( customMicroGrit - 0.5 ) * 0.3 + ( 1.0 - customCreviceMask ) * 0.1, 0.4, 1.0 );
 
-      // Perturb the physical normal vector (world space) so Three.js PBR light
-      // loops evaluate relief. The fragment prefix has no normalMatrix, but the
-      // view transform is rigid, so mat3(viewMatrix) maps the world-space
-      // normal into the view space the standard lighting expects
+      // Add the procedural bevel to the tangent-space normal map result.
+      vec3 textureMappedNormal = normal;
+      vec3 customBaseViewNormal = normalize( mat3( viewMatrix ) * vCustomNormal );
       vec3 customPerturbedNormal = normalize( vCustomNormal + ( customBevelNormalOffset + vec3( customMicroGrit - 0.5 ) ) * uBumpStrength );
-      normal = normalize( mat3( viewMatrix ) * customPerturbedNormal );
+      vec3 customReliefViewNormal = normalize( mat3( viewMatrix ) * customPerturbedNormal );
+      normal = normalize( textureMappedNormal + customReliefViewNormal - customBaseViewNormal );
       `
     );
   };
