@@ -9,8 +9,8 @@ export interface DamageResult {
 
 /**
  * Applies one damage instance. A target inside its hurt window, a dead target,
- * or a non-positive amount is ignored. While hero death is disabled the hero
- * clamps at 1 health instead of dying.
+ * or a non-positive amount is ignored. When `HERO_DEATH_ENABLED` is false the
+ * hero clamps at 1 health instead of dying.
  */
 export function applyDamage(
   target: Entity,

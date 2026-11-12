@@ -5,6 +5,9 @@ const configuredLevel = Number(import.meta.env.VITE_STARTING_LEVEL);
 const startingLevel =
   Number.isFinite(configuredLevel) && configuredLevel > 0 ? configuredLevel : 1;
 
+/** Depth a fresh run begins on. Restart and new-game both use this value. */
+export const STARTING_DEPTH = startingLevel;
+
 /** The environment provides the initial state; the runtime toggle overrides it later. */
 const initialPhysicsDebug = import.meta.env.VITE_DEBUG_PHYSICS === 'true';
 const initialPathDebug = import.meta.env.VITE_DEBUG_PATH === 'true';
@@ -21,7 +24,7 @@ const initialPathDebug = import.meta.env.VITE_DEBUG_PATH === 'true';
 export const useGameStore = create<GameState>()((set) => ({
   autoPlaying: true,
   lastInputTime: 0,
-  currentDepth: startingLevel,
+  currentDepth: STARTING_DEPTH,
   goldCollected: 0,
   monstersSlain: 0,
   hasKey: false,

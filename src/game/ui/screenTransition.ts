@@ -12,6 +12,11 @@ export interface ScreenTransitionOptions {
   reducedMotion?: boolean;
 }
 
+export interface CommitScreenEventOptions extends ScreenTransitionOptions {
+  /** Runs immediately before the screen event, inside the same update. */
+  before?: () => void;
+}
+
 /**
  * True only when the browser matches the reduced-motion preference. Missing
  * matchMedia (older browsers, tests) counts as motion allowed.
@@ -65,10 +70,12 @@ export function runScreenTransition(
  */
 export function commitScreenEvent(
   event: ScreenEvent,
-  options: ScreenTransitionOptions = {}
+  options: CommitScreenEventOptions = {}
 ): void {
-  runScreenTransition(
-    () => useScreenStore.getState().send(event),
-    options
-  );
+  const { before, ...transitionOptions } = options;
+
+  runScreenTransition(() => {
+    before?.();
+    useScreenStore.getState().send(event);
+  }, transitionOptions);
 }

@@ -54,16 +54,15 @@ describe('applyDamage', () => {
     expect(monster.health).toBe(0);
   });
 
-  it('clamps the hero at 1 health while hero death is disabled', () => {
+  it('kills the hero at zero health', () => {
     const hero = track(createHero(new Vector3()));
     hero.health = 10;
 
     const result = applyDamage(hero, 50, 1000, 700);
 
-    expect(result.applied).toBe(true);
-    expect(result.killed).toBe(false);
-    expect(hero.health).toBe(1);
-    expect(hero.state).not.toBe('dead');
+    expect(result).toEqual({ applied: true, dealt: 10, killed: true });
+    expect(hero.health).toBe(0);
+    expect(hero.state).toBe('dead');
   });
 
   it('ignores zero and negative amounts', () => {

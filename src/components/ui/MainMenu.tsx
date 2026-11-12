@@ -1,10 +1,11 @@
 import { commitScreenEvent } from '../../game/ui/screenTransition';
+import { resetRunState } from '../../game/ui/runSession';
 import styles from './MainMenu.module.scss';
 
 /**
  * Initial screen. The Enter Dungeon button is the only gesture required to
- * start playing; it goes through the screen transition helper so supported
- * browsers animate the swap and reduced-motion users get a direct update.
+ * start playing. It resets the previous run inside the same View Transition as
+ * the screen change, then hands off to the transition helper.
  */
 export default function MainMenu() {
   return (
@@ -16,7 +17,9 @@ export default function MainMenu() {
         <button
           type="button"
           className={styles.enter}
-          onClick={() => commitScreenEvent('startGame')}
+          onClick={() =>
+            commitScreenEvent('startGame', { before: resetRunState })
+          }
         >
           Enter Dungeon
         </button>

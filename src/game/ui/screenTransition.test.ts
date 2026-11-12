@@ -94,6 +94,24 @@ describe('commitScreenEvent', () => {
     expect(useScreenStore.getState().screen).toBe('playing');
   });
 
+  it('runs the before hook inside the update, before the event', () => {
+    const seen: string[] = [];
+    let callback: (() => void) | undefined;
+
+    commitScreenEvent('startGame', {
+      before: () => seen.push(useScreenStore.getState().screen),
+      startViewTransition: (run) => {
+        callback = run;
+      },
+      reducedMotion: false,
+    });
+
+    expect(seen).toEqual([]);
+    callback!();
+    expect(seen).toEqual(['mainMenu']);
+    expect(useScreenStore.getState().screen).toBe('playing');
+  });
+
   it('keeps blocked events as no-ops', () => {
     commitScreenEvent('restart', { reducedMotion: true });
 

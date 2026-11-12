@@ -12,5 +12,5 @@ export const KNOCKBACK_MS = 150;
 export const STRIKE_GRACE = 0.3;
 /** Forward lunge shown after a monster strike lands. */
 export const MONSTER_LUNGE_MS = 120;
-/** Hero death is deferred to 06-09. */
-export const HERO_DEATH_ENABLED = false;
+/** Hero death is enabled so the Playing screen can hand off to Game Over. */
+export const HERO_DEATH_ENABLED = true;

@@ -8,6 +8,7 @@ import PathDebug from './components/debug/PathDebug';
 import Dungeon from './components/dungeon/Dungeon';
 import Effects from './components/Effects';
 import Hero from './components/hero/Hero';
+import HeroDeathBridge from './components/hero/HeroDeathBridge';
 import HeroVitalsBridge from './components/hero/HeroVitalsBridge';
 import InputBridge from './components/hero/InputBridge';
 import LevelEntities from './components/level/LevelEntities';
@@ -21,6 +22,7 @@ import IsometricCamera from './components/scene/IsometricCamera';
 import Lighting from './components/scene/Lighting';
 import MainMenu from './components/ui/MainMenu';
 import HUD from './components/ui/HUD';
+import GameOver from './components/ui/GameOver';
 import { getDungeonLayout } from './game/dungeon/getDungeonLayout';
 import { useGameStore } from './game/store';
 import { useScreenStore } from './game/ui/screenStore';
@@ -75,6 +77,7 @@ export default function App() {
                 <LevelEntities layout={layout} />
                 <InputBridge />
                 <HeroVitalsBridge />
+                <HeroDeathBridge />
               </GamePhysics>
               <Effects />
               {import.meta.env.DEV && <PathDebug layout={layout} />}
@@ -87,6 +90,7 @@ export default function App() {
 
       <div className={styles.uiLayer}>
         {screen === 'mainMenu' && <MainMenu />}
+        {screen === 'gameOver' && <GameOver />}
         {screen === 'playing' && (
           <>
             <HUD />
