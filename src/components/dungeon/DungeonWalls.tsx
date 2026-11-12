@@ -7,7 +7,7 @@ import {
   WALL_THICKNESS,
 } from '../../game/dungeon/constants';
 import { getWallInstanceData } from '../../game/dungeon/wallInstances';
-import { createProceduralStoneTextures } from '../../game/textures';
+import { createDungeonWallMaterial } from '../environment/WallShaderMaterial';
 
 interface DungeonWallsProps {
   layout: DungeonLayout;
@@ -17,44 +17,23 @@ interface WallBatchProps {
   matrices: Float32Array;
   count: number;
   height: number;
-  material: THREE.Material;
-  /** Vertical UV span. Low ledges show one stone course instead of two. */
-  uvScaleY?: number;
+  material: THREE.MeshStandardMaterial;
 }
 
-/** Builds the wall box and lets each height category set its own UV span. */
-function createWallGeometry(height: number, uvScaleY: number): THREE.BoxGeometry {
-  const geometry = new THREE.BoxGeometry(WALL_THICKNESS, height, WALL_THICKNESS);
-
-  if (uvScaleY !== 1) {
-    const uv = geometry.attributes.uv;
-    for (let i = 0; i < uv.count; i++) {
-      uv.setY(i, uv.getY(i) * uvScaleY);
-    }
-    uv.needsUpdate = true;
-  }
-
-  return geometry;
+/** Builds the 1-segment wall box; the shader does all relief in-fragment. */
+function createWallGeometry(height: number): THREE.BoxGeometry {
+  return new THREE.BoxGeometry(WALL_THICKNESS, height, WALL_THICKNESS);
 }
 
 /**
  * One instanced draw call for a height category. The geometry owns the wall
- * height, so an instance transform only places the cell. Both batches receive
- * the same material instance, and each cell gets a subtle instance tint so the
- * slab layout does not read as a repeated stamp.
+ * height, so an instance transform only places the cell. Both batches share
+ * the same PBR material instance; per-cell stone variation comes from the
+ * world-space triplanar pattern in the material, not from instance colors.
  */
-function WallBatch({
-  matrices,
-  count,
-  height,
-  material,
-  uvScaleY = 1,
-}: WallBatchProps) {
+function WallBatch({ matrices, count, height, material }: WallBatchProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
-  const geometry = useMemo(
-    () => createWallGeometry(height, uvScaleY),
-    [height, uvScaleY]
-  );
+  const geometry = useMemo(() => createWallGeometry(height), [height]);
 
   useLayoutEffect(() => {
     const mesh = meshRef.current;
@@ -65,29 +44,6 @@ function WallBatch({
     mesh.count = count;
     mesh.instanceMatrix.needsUpdate = true;
     mesh.computeBoundingSphere();
-
-    // Cycle a slate, blue, and purple tint per wall cell. The albedo stays
-    // neutral, so neighbouring cells vary without any extra texture.
-    const tints = [
-      [0.92, 0.97, 1.06],
-      [0.62, 0.8, 1.18],
-      [0.82, 0.68, 1.16],
-    ] as const;
-    const color = new THREE.Color();
-    for (let i = 0; i < count; i++) {
-      const x = matrices[i * 16 + 12];
-      const z = matrices[i * 16 + 14];
-      const hash =
-        Math.abs(Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1;
-      const cellX = Math.round(x * 2);
-      const cellZ = Math.round(z * 2);
-      const tone = (((cellX + cellZ * 2) % 3) + 3) % 3;
-      const [r, g, b] = tints[tone];
-      const brightness = 0.9 + hash * 0.16;
-      color.setRGB(r * brightness, g * brightness, b * brightness);
-      mesh.setColorAt(i, color);
-    }
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }, [matrices, count]);
 
   if (count === 0) return null;
@@ -111,20 +67,12 @@ function WallBatch({
 export default function DungeonWalls({ layout }: DungeonWallsProps) {
   const instances = getWallInstanceData(layout);
 
-  // Generate the canvas maps once and share one material across both wall
-  // batches. No texture work or material allocation happens during a frame.
-  const wallMaterial = useMemo(() => {
-    const maps = createProceduralStoneTextures();
-    const material = new THREE.MeshStandardMaterial({
-      map: maps.albedo ?? undefined,
-      normalMap: maps.normal ?? undefined,
-      roughnessMap: maps.roughness ?? undefined,
-      roughness: 1,
-      metalness: 0.04,
-    });
-    material.normalScale.set(1.0, 1.0);
-    return material;
-  }, []);
+  // One PBR material shared by both batches. Its onBeforeCompile hook injects
+  // the triplanar stone albedo and the perturbed surface normal into
+  // Three.js's standard lighting pipeline, so native torch, point, and
+  // directional lights illuminate the walls and shadow the stone relief.
+  // No texture work or material allocation happens during a frame.
+  const wallMaterial = useMemo(() => createDungeonWallMaterial(), []);
 
   return (
     <group>
@@ -139,7 +87,6 @@ export default function DungeonWalls({ layout }: DungeonWallsProps) {
         count={instances.lowCount}
         height={WALL_HEIGHT_LOW}
         material={wallMaterial}
-        uvScaleY={0.5}
       />
     </group>
   );
