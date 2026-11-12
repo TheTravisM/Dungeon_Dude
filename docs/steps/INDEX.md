@@ -223,7 +223,7 @@ Do not start feature implementation until the baseline check is understood and a
 | [x] | 7.02 | View Transitions API integration and reduced motion |
 | [x] | 7.03 | Main Menu interface and start flow |
 | [x] | 7.04 | HUD: health, gold, and depth |
-| [ ] | 7.05 | Game Over interface and restart/continue flow |
+| [x] | 7.05 | Game Over interface and restart/continue flow |
 | [ ] | 7.06 | Responsive polish, accessibility, and Step 7 acceptance |
 
 ## 8. Step 8 — Audio and Deckard Cain TTS
