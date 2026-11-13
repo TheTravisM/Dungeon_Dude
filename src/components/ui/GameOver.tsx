@@ -23,7 +23,6 @@ export default function GameOver() {
     <section
       className={styles.overlay}
       role="dialog"
-      aria-modal="true"
       aria-labelledby="game-over-title"
       aria-describedby="game-over-subtitle"
     >

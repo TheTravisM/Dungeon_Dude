@@ -43,3 +43,17 @@ body, html, #root {
     transform: scale(0.95);
   }
 }
+
+// The JavaScript helper already skips startViewTransition when reduced motion
+// is requested; this CSS guard covers browsers that animate the named
+// pseudo-elements for other reasons and removes popover motion as well.
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+
+  [popover] {
+    transition: none;
+  }
+}

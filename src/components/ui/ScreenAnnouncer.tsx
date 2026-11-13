@@ -29,7 +29,12 @@ export default function ScreenAnnouncer() {
   }, [screen, depth, gold, monstersSlain]);
 
   return (
-    <p className={styles.announcer} role="status" aria-live="polite">
+    <p
+      className={styles.announcer}
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       {message}
     </p>
   );

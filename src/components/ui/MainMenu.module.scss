@@ -1,8 +1,10 @@
 .menu {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
   padding: clamp(1rem, 4vw, 3rem);
   pointer-events: auto;
   container-type: inline-size;
@@ -17,14 +19,16 @@
 
 .panel {
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   align-items: center;
   gap: clamp(1.25rem, 3vw, 2.5rem);
+  margin: auto;
   text-align: center;
 }
 
 .title {
-  font-size: clamp(1.35rem, 6cqw, 3.25rem);
+  font-size: clamp(1.35rem, min(6cqw, 7vh), 3.25rem);
   line-height: 1.25;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -34,34 +38,28 @@
     0 4px 0 rgba(0, 0, 0, 0.55);
 }
 
-.enter {
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: clamp(0.7rem, 2vw, 1rem);
+}
+
+.button {
   font-family: inherit;
   font-size: clamp(0.65rem, 1.8cqw, 0.9rem);
   padding: clamp(0.85rem, 2.2vw, 1.1rem) clamp(1.4rem, 4vw, 2.6rem);
-  color: #fff6e8;
-  background: linear-gradient(180deg, #b45309, #7c3f0a);
-  border: 1px solid rgba(255, 214, 170, 0.45);
   border-radius: 6px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   cursor: pointer;
-  box-shadow:
-    0 6px 0 #3d2208,
-    0 10px 24px rgba(0, 0, 0, 0.45);
   transition:
     transform 120ms ease,
     box-shadow 120ms ease,
     filter 120ms ease;
 
-  &:hover {
-    filter: brightness(1.12);
-  }
-
   &:active {
     transform: translateY(3px);
-    box-shadow:
-      0 3px 0 #3d2208,
-      0 6px 14px rgba(0, 0, 0, 0.4);
   }
 
   &:focus-visible {
@@ -70,8 +68,129 @@
   }
 }
 
+.enter {
+  color: #fff6e8;
+  background: linear-gradient(180deg, #b45309, #7c3f0a);
+  border: 1px solid rgba(255, 214, 170, 0.45);
+  box-shadow:
+    0 6px 0 #3d2208,
+    0 10px 24px rgba(0, 0, 0, 0.45);
+
+  &:hover {
+    filter: brightness(1.12);
+  }
+
+  &:active {
+    box-shadow:
+      0 3px 0 #3d2208,
+      0 6px 14px rgba(0, 0, 0, 0.4);
+  }
+}
+
+.controls {
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35);
+
+  &:hover {
+    filter: brightness(1.15);
+  }
+
+  &:active {
+    box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+  }
+}
+
+/**
+ * The global stylesheet owns the popover entry animation; this module only
+ * provides the menu's layout and palette.
+ */
+.popover {
+  position: fixed;
+  inset: 0;
+  width: min(90vw, 24rem);
+  height: fit-content;
+  max-height: min(80vh, 30rem);
+  margin: auto;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  overflow-y: auto;
+  color: #fff;
+  background: #141a26;
+  border: 1px solid rgba(255, 214, 170, 0.35);
+  border-radius: 8px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+
+  &::backdrop {
+    background: rgba(7, 9, 13, 0.62);
+    backdrop-filter: blur(2px);
+  }
+}
+
+.popoverTitle {
+  margin-bottom: clamp(0.7rem, 2vw, 1rem);
+  font-size: clamp(0.8rem, 2.2vw, 1rem);
+  line-height: 1.5;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-torch-fire);
+}
+
+.controlList {
+  display: grid;
+  gap: clamp(0.6rem, 1.8vw, 0.9rem);
+  margin: 0;
+}
+
+.controlRow {
+  display: grid;
+  grid-template-columns: minmax(5rem, auto) 1fr;
+  gap: clamp(0.6rem, 2vw, 1rem);
+  align-items: baseline;
+}
+
+.controlLabel {
+  font-size: clamp(0.58rem, 1.7vw, 0.7rem);
+  line-height: 1.6;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.controlValue {
+  margin: 0;
+  font-size: clamp(0.6rem, 1.8vw, 0.72rem);
+  line-height: 1.7;
+  color: #fff;
+}
+
+.popoverHint {
+  margin-top: clamp(0.8rem, 2vw, 1.1rem);
+  font-size: clamp(0.52rem, 1.6vw, 0.62rem);
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+/**
+ * Short landscape viewports: tighten the vertical rhythm before the panel
+ * needs to scroll.
+ */
+@media (max-height: 34rem) {
+  .panel {
+    gap: clamp(0.9rem, 2.4vh, 1.4rem);
+  }
+
+  .actions {
+    gap: clamp(0.5rem, 1.6vw, 0.75rem);
+  }
+
+  .button {
+    padding-block: clamp(0.7rem, 2.4vh, 0.9rem);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .enter {
+  .button {
     transition: none;
   }
 }
