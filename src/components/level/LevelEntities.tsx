@@ -2,6 +2,7 @@ import type { DungeonLayout, Entity } from '../../types';
 import CombatSystem from '../combat/CombatSystem';
 import DamageNumbers from '../combat/DamageNumbers';
 import MonsterActor from '../monsters/MonsterActor';
+import MonsterBlobs from '../monsters/MonsterBlobs';
 import MonsterSystem from '../monsters/MonsterSystem';
 import MonsterIndexSystem from './MonsterIndexSystem';
 import PoiMarker from './PoiMarker';
@@ -25,6 +26,7 @@ export default function LevelEntities({ layout }: LevelEntitiesProps) {
     <>
       <MonsterIndexSystem />
       <MonsterSystem />
+      <MonsterBlobs />
       <CombatSystem />
       <DamageNumbers />
       {monsters.map((entity) => (

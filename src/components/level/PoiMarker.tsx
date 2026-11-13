@@ -12,8 +12,6 @@ export default function PoiMarker({ kind, position: pos }: PoiMarkerProps) {
           <mesh
             key={step}
             position={[0, 0.06 + step * 0.08, step * 0.12]}
-            castShadow={false}
-            receiveShadow
           >
             <boxGeometry args={[0.7 - step * 0.08, 0.08, 0.32]} />
             <meshStandardMaterial color="#4a4d5a" roughness={0.95} />
@@ -29,7 +27,7 @@ export default function PoiMarker({ kind, position: pos }: PoiMarkerProps) {
 
   return (
     <group position={[pos[0], pos[1] + 0.35, pos[2]]}>
-      <mesh rotation={[Math.PI / 2, 0, 0]} castShadow={false}>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[0.1, 0.025, 8, 16]} />
         <meshStandardMaterial
           color="#d9b04a"
@@ -39,7 +37,7 @@ export default function PoiMarker({ kind, position: pos }: PoiMarkerProps) {
           metalness={0.6}
         />
       </mesh>
-      <mesh position={[0, -0.12, 0]} castShadow={false}>
+      <mesh position={[0, -0.12, 0]}>
         <boxGeometry args={[0.05, 0.16, 0.05]} />
         <meshStandardMaterial
           color="#d9b04a"
@@ -49,7 +47,7 @@ export default function PoiMarker({ kind, position: pos }: PoiMarkerProps) {
           metalness={0.6}
         />
       </mesh>
-      <mesh position={[0.06, -0.16, 0]} rotation={[0, 0, Math.PI / 2]} castShadow={false}>
+      <mesh position={[0.06, -0.16, 0]} rotation={[0, 0, Math.PI / 2]}>
         <boxGeometry args={[0.04, 0.1, 0.04]} />
         <meshStandardMaterial color="#d9b04a" roughness={0.5} metalness={0.6} />
       </mesh>

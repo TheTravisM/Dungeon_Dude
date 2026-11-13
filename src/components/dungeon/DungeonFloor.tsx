@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useTexture } from '@react-three/drei';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import * as THREE from 'three';
 import type { DungeonLayout } from '../../types';
 import { FLOOR_TILE_HEIGHT } from '../../game/dungeon/constants';
+import { FLOOR_TEXTURES } from '../../config/assets';
 import {
   FLOOR_INSTANCE_STRIDE,
   getFloorInstanceMatrices,
@@ -20,26 +22,26 @@ interface DungeonFloorProps {
  * Draws every walkable cell from one InstancedMesh. Geometry, material, and
  * transforms are shared, so floor complexity costs one draw call instead of one
  * React mesh per tile. Matrices come from a module-level cache and are copied
- * into the instance buffer once per layout.
+ * into the instance buffer once per layout. The slight bevel catches the cool
+ * key light so tiles read as stone rather than paper.
  */
 export default function DungeonFloor({ layout }: DungeonFloorProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const matrices = getFloorInstanceMatrices(layout);
   const [albedoMap, normalMap, roughnessMap, aoMap] = useTexture([
-    '/assets/textures/floor_bricks_02_diff_2k.jpg',
-    '/assets/textures/floor_bricks_02_nor_gl_2k.jpg',
-    '/assets/textures/floor_bricks_02_rough_2k.jpg',
-    '/assets/textures/floor_bricks_02_ao_2k.jpg',
+    FLOOR_TEXTURES.albedo,
+    FLOOR_TEXTURES.normal,
+    FLOOR_TEXTURES.roughness,
+    FLOOR_TEXTURES.ao,
   ]);
   const floorMaterial = useMemo(() => {
     configureDungeonFloorTextures(albedoMap, normalMap, roughnessMap, aoMap);
     return createDungeonFloorMaterial(albedoMap, normalMap, roughnessMap, aoMap);
   }, [albedoMap, normalMap, roughnessMap, aoMap]);
-  const geometry = useMemo(() => {
-    const boxGeometry = new THREE.BoxGeometry(1, FLOOR_TILE_HEIGHT, 1);
-    boxGeometry.setAttribute('uv2', boxGeometry.getAttribute('uv'));
-    return boxGeometry;
-  }, []);
+  const geometry = useMemo(
+    () => new RoundedBoxGeometry(1, FLOOR_TILE_HEIGHT, 1, 1, 0.018),
+    []
+  );
 
   useEffect(() => () => floorMaterial.dispose(), [floorMaterial]);
 
@@ -58,7 +60,6 @@ export default function DungeonFloor({ layout }: DungeonFloorProps) {
     <instancedMesh
       ref={meshRef}
       args={[geometry, floorMaterial, layout.floorCells.length]}
-      receiveShadow
     />
   );
 }

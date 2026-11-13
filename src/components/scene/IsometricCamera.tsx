@@ -6,6 +6,7 @@ import {
   CAMERA_ZOOM,
   DEBUG_ORBIT_CONTROLS,
 } from './cameraConstants';
+import { CAMERA_FAR, CAMERA_NEAR } from '../../config/dioramaConfig';
 
 interface IsometricCameraProps {
   zoom?: number;
@@ -27,8 +28,8 @@ export default function IsometricCamera({
         makeDefault
         position={CAMERA_OFFSET}
         zoom={zoom}
-        near={0.1}
-        far={200}
+        near={CAMERA_NEAR}
+        far={CAMERA_FAR}
       />
       {DEBUG_ORBIT_CONTROLS && (
         <OrbitControls makeDefault target={[0, 0, 0]} enableDamping />

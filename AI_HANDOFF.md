@@ -703,3 +703,105 @@ For the micro-step workflow, `docs/steps/INDEX.md` governs the interaction loop:
 - **2026-11-11 - 7.01 Screen-state model and transition boundaries:** Added `src/game/ui/screenState.ts` with a pure `ScreenState` union (`mainMenu`, `playing`, `gameOver`), four screen events (`startGame`, `heroDied`, `restart`, `returnToMenu`), an explicit transition table, and `canTransition`/`nextScreen` helpers. Added `src/game/ui/screenStore.ts`, a small Zustand store holding only the current screen; blocked events return the existing state object, so subscribers do not re-render. Kept screen state out of protected `src/types/index.ts` and out of the existing aggregate `GameState`. Added 7 tests covering every allowed and blocked edge plus store sequencing and reset. No App wiring, screens, CSS, or View Transition code was added. `npx tsc -b --pretty false`, `npm run lint`, `npm test` (36 files / 177 tests), `npm run build`, and `git diff --check` pass. Approved by the user on 2026-11-11.
 - **2026-11-11 - 06-09 Step 6 integration and acceptance:** Added `src/game/monsters/step6Scenario.test.ts`, a fixed-seed (42, depth 1) end-to-end scenario covering deterministic spawn plan and placement, ECS creation, proximity-index size, real-brain aggro and navigation without leaving walkable cells, one sword hit per monster per swing, damage through `resolveHits` until death, death-event queueing and index cleanup, monster wind-up/cooldown/strike timing, hero damage with 700 ms i-frames, and knockback direction/fade. No production code changed. `npx tsc -b --pretty false`, `npm run lint`, `npm test` (35 files / 170 tests), `npm run build`, and `git diff --check` pass; the build reports only the pre-existing large-chunk and Sass deprecation warnings. The user approved the complete Step 6 result after browser verification on 2026-11-11; 6.09 is ticked and Step 6 is closed. Known limitation: pooling/mesh recycling for dead monsters and hero death handling remain out of scope until later UI work, as planned.
 - **2026-11-11 - 05-14 Step 5 integration and acceptance:** Added `src/game/hero/ai/exploreSim.test.ts`, a headless point-mass simulation over seeds 1 to 50. It mirrors the brain and intent loop (pick room, plan world path, smooth, consume waypoints within `HERO_WAYPOINT_REACH`, move at `HERO_SPEED` in 60 Hz steps) and asserts every room is visited within 60 simulated seconds per room, every sampled position is walkable, and no reachable route is null. Cleanup found no `TEMP`, `console.*`, or dead imports in `src`; the dev readout, path overlay, and click-to-route tool stay `import.meta.env.DEV` gated. Removed the unused `howler` and `@types/howler` dependencies. `npx tsc -b --pretty false`, `npm run lint`, `npm test` (83/83), `npm run build`, `node scripts/verify-dungeon.mjs` (500/500 seeds), and `git diff --check` pass. The production build contains no debug-overlay strings. Browser soak acceptance (seeds 1, 42, and a user seed) and the INDEX 5.14/header ticks remain pending.
+
+---
+
+## 7. Overhaul baseline (Phase 0, 2026-11-13)
+
+Recorded before the visual overhaul. These are the values the overhaul must preserve unless a phase explicitly changes them.
+
+### 7.1 Installed versions
+
+- three 0.187.0
+- @react-three/fiber 9.8.2
+- @react-three/drei 10.7.9
+- @react-three/postprocessing 3.2.2
+- postprocessing 6.39.6
+- @react-three/rapier 2.2.0
+- miniplex 2.0.0
+- zustand 5.1.0
+
+### 7.2 Canvas and camera
+
+- Canvas props: `shadows="percentage"`, `dpr={[1, 2]}`, `orthographic`, camera `position=[20, 20, 20]`, `zoom=64`, `near=0.1`, `far=200`.
+- `IsometricCamera.tsx` repeats the same orthographic props and calls `lookAt` through `CameraFollow`.
+- `cameraConstants.ts`: `CAMERA_OFFSET = [20, 20, 20]`, `CAMERA_ZOOM = 64`.
+- `CameraFollow` keeps the offset fixed and damps a focus point with a 0.15 s velocity look-ahead, 0.25 s smoothing, and focus height `FLOOR_TOP + 0.5`.
+
+### 7.3 Torch light (verbatim)
+
+From `src/components/hero/HeroTorch.tsx` and `src/hooks/hero/useTorchFlicker.ts`:
+
+- Spot: color `#ffcf9a`, intensity `46`, angle `Math.PI / 2.4`, penumbra `0.9`, distance `14`, decay `1.6`, local position `[0, 0.1, 0]`, `castShadow`, shadow map `1024 x 1024`, bias `-0.0005`, normalBias `0.03`, camera near `0.1`, far `14`.
+- Point fill: color `#ffbe82`, intensity `5`, distance `6`, decay `2`.
+- Flicker bases: spot `46`, glow `5`; composite wave amplitude is about +/-18 percent.
+- The torch is the only dynamic light. Keep these values and the flicker shape.
+
+### 7.4 Ambient and fill lights
+
+From `src/components/scene/Lighting.tsx`:
+
+- `ambientLight` color `#9aa0b8`, intensity `0.55`.
+- `directionalLight` color `#c2cbdc`, intensity `1.65`, position `[12, 18, 8]`.
+- The original Step 2 values were ambient `#9db4d6` at `1.1` and a warm directional `#ffb877` at `3.4`; those are historical. The cool pair above is current.
+
+### 7.5 Current effects
+
+`src/components/Effects.tsx` renders one `EffectComposer enableNormalPass multisampling={4}` with, in order: `SSAO` (16 samples, 3 rings, intensity 1.5, radius 0.4, bias 0.02, resolutionScale 0.5), `TiltShift` (focusArea 0.75, feather 0.5, medium kernel, resolutionScale 0.5), custom `Dither` (strength 0.03, scale 2), `Noise` (overlay, 0.06), and `Vignette` (offset 0.35, darkness 0.5).
+
+### 7.6 Dungeon grid
+
+- `DungeonLayout` in `src/types/index.ts`: `seed`, `size` (20), `rooms`, `floorCells`, `wallCells` (with `height: 'tall' | 'low'`), `wallRuns`, `spawn`.
+- Generation lives in `src/game/dungeon/` and is seeded by `seedForDepth` (depth 1 = 1337). Layouts are cached by seed in `getDungeonLayout.ts`.
+- Rendering: `Dungeon.tsx` composes `DungeonPlinth`, `DungeonFloor` (one instanced mesh), `DungeonWalls` (two instanced batches, tall and low), and `DungeonCollider` (one fixed Rapier body with merged floor and wall cuboids).
+- Floor matrices come from `floorInstances.ts`; wall matrices from `wallInstances.ts`; collider specs from `colliders.ts`.
+
+### 7.7 Hero build
+
+- `Hero.tsx` owns one ECS entity through `useHeroEntity`, one `kinematicPosition` `RigidBody` with `colliders={false}`, one `CapsuleCollider` at `[0, HERO_CAPSULE_CENTER_Y, 0]`, and the visual `HeroModel`.
+- Capsule: radius 0.28, height 1.05, half-height 0.245, ground clearance 0.02, center Y 0.285.
+- `HeroModel.tsx` is a procedural primitive kit: layered torso, cloak, head, legs, sword arm at local +X, torch arm at local -X. Animation is procedural through `useHeroAnimation` (walk cycle, sword attack pose, torch sway) and `useTorchFlicker`.
+- ECS fields used by the hero: `position`, `velocity`, `heading`, plus combat and vital fields in `src/types/index.ts`.
+
+### 7.8 Shadow usage inventory
+
+`castShadow`, `receiveShadow`, or `shadows` currently appear in:
+
+- `src/App.tsx` (`shadows="percentage"`).
+- `src/components/hero/HeroTorch.tsx` (spot shadow settings and `castShadow`).
+- `src/components/hero/HeroModel.tsx` (many `castShadow` flags).
+- `src/components/dungeon/DungeonFloor.tsx`, `DungeonWalls.tsx`, `DungeonPlinth.tsx` (`receiveShadow`).
+- `src/components/monsters/Monster.tsx` (`castShadow={false}`, `receiveShadow`).
+- `src/components/level/PoiMarker.tsx` (`castShadow={false}`, `receiveShadow`).
+
+The overhaul removes all of these in Phase 5 and replaces contact grounding with blob shadows.
+
+### 7.9 Baseline performance
+
+A real desktop browser measurement was not available inside this headless execution environment. The Phase 5 checklist records measured draw calls, triangles, textures, and frame time from `renderer.info` on the actual target hardware; do not treat a guessed number here as a baseline.
+
+---
+
+## 8. Visual overhaul implementation log (2026-11-13)
+
+Micro-step entries for `docs/Dungeon_Dude_Overhaul_Blueprint_v2.md`. Automated verification after the final step: `npx tsc --noEmit`, `npm run lint`, `npm test` (46 files / 235 tests), `npm run build`, and `node scripts/verify-dungeon.mjs` (500/500 seeds).
+
+- 0.1 Recon: added the Overhaul baseline in section 7 above. Torch values, camera, lights, effects, grid storage, hero wiring, shadow inventory, and version list recorded.
+- 1.1 Assets: added `docs/ASSET_PIPELINE.md` and `docs/ASSETS.md`. Mixamo files are not present, so the manual acquisition checklist remains open.
+- 1.2 Optimizer: added `scripts/optimize-assets.mjs`, the `assets:optimize` npm script, and `@gltf-transform/cli` plus `sharp`. Ran the legacy pass to produce the shipped WebP maps.
+- 1.3 Registry: added `src/config/assets.ts` with hashed Vite texture imports, clip names, and bone names.
+- 2.1 Config and tier: added `src/config/dioramaConfig.ts`, `src/game/quality/tierStore.ts`, and the `QualityTier` type.
+- 2.2/2.3/2.4 Effects: replaced the SSAO/TiltShift/Dither/Noise chain with hero-tracked DepthOfField plus near-black Vignette on the high tier and TiltShift2 plus Vignette on the low tier. GPU probe picks the start tier; PerformanceMonitor can only downgrade.
+- 2.5 Palette: cooled and lowered the ambient and directional lights. Torch values are unchanged.
+- 3.1 Pure modules: added `seededRandom`, `buildTileMatrices`, and `mergeWallColliders` plus Vitest coverage.
+- 3.2/3.3/3.4 Environment: floor and wall renderers read the asset registry, use beveled/chipped geometry, seeded Y jitter, tilt, quarter-turn yaw, wall scale/lean, and one combined wall instance batch.
+- 3.5 Colliders: unchanged merged static body; the verifier now tolerates visual jitter while still proving coverage.
+- 4.1 Hero config: added `src/game/hero/heroConfig.ts` with measured capsule values and attachment offsets.
+- 4.5 Attachments: added `HeroAttachments.tsx` with a red hooded cowl, large back shield, and heavy left pauldron. Torso and legs moved to leather and the boots to brown.
+- 4.6 Torch: kept the Phase 0 color, intensity, distance, decay, and flicker. Removed the shadow map settings only.
+- 5.1 Shadows: removed every `castShadow`, `receiveShadow`, `shadows`, `shadow-`, and `shadowMap` usage in `src`.
+- 5.2 Blobs: added a shared radial blob texture, `BlobShadow` for the hero, and one instanced blob batch for monsters.
+- 5.3 Canvas and physics: dpr capped at 1.5, antialias disabled, high-performance GL settings, fixed 1/60 physics retained, dev renderer logger added.
+- 5.4 Performance: added `docs/PERF_CHECKLIST.md`. Phone numbers are still pending a real-device run.
+
+Browser-only checks still pending user confirmation: the exact vignette/blur look, the low-tier force swap, 10 descents without warnings, a full-map hero walk, and the 5 minute phone soak.

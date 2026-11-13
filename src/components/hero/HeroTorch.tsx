@@ -4,9 +4,10 @@ import type { Mesh, Object3D, PointLight, SpotLight } from 'three';
 import { useTorchFlicker } from '../../hooks/hero/useTorchFlicker';
 
 /**
- * Handheld torch effect: one shadow-casting spotlight, one shadowless point
- * fill, a tiny emissive flame, and rising embers. The light is a soft amber so
- * it accents the cool stone instead of washing it toward red.
+ * Handheld torch effect: one spotlight, one fill point light, a tiny emissive
+ * flame, and rising embers. The light is a soft amber so it accents the cool
+ * stone instead of washing it toward red. The spotlight is unshadowed;
+ * contact grounding comes from the blob decal instead.
  *
  * Rendered inside the `torchHand` group, so it inherits the raised arm. The
  * spotlight target is a sibling in the same group (contract 6.6) and aims at
@@ -33,7 +34,6 @@ export default function HeroTorch() {
     <group>
       <spotLight
         ref={spotRef}
-        castShadow
         color="#ffcf9a"
         intensity={46}
         angle={Math.PI / 2.4}
@@ -41,17 +41,12 @@ export default function HeroTorch() {
         distance={14}
         decay={1.6}
         position={[0, 0.1, 0]}
-        shadow-mapSize={[1024, 1024]}
-        shadow-bias={-0.0005}
-        shadow-normalBias={0.03}
-        shadow-camera-near={0.1}
-        shadow-camera-far={14}
       />
 
       {/* Aim point on the floor in front of and below the torch. */}
       <object3D ref={targetRef} position={[0, -1.3, 0.4]} />
 
-      {/* Soft fill only; never cast shadows here. */}
+      {/* Soft fill only. */}
       <pointLight
         ref={glowRef}
         color="#ffbe82"
@@ -60,7 +55,7 @@ export default function HeroTorch() {
         decay={2}
       />
 
-      <mesh ref={flameRef} position={[0, 0.26, 0]} castShadow={false}>
+      <mesh ref={flameRef} position={[0, 0.26, 0]}>
         <octahedronGeometry args={[0.07, 0]} />
         <meshBasicMaterial color="#ffcf70" toneMapped={false} />
       </mesh>

@@ -121,8 +121,8 @@ export function useHeroAnimation(rig: HeroRig): void {
     easing.damp(hips.position, 'y', bob, POSE_SMOOTH_TIME, delta);
 
     // The torch arm sways with the stride, with a faint idle drift that fades
-    // out as the hero picks up speed. Lights are children of torchHand, so
-    // those shadows inherit this motion.
+    // out as the hero picks up speed. The light is a child of torchHand, so it
+    // inherits this motion.
     const idleSway =
       Math.sin(state.clock.elapsedTime * IDLE_SWAY_RATE) *
       IDLE_SWAY_AMPLITUDE *

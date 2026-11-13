@@ -7,6 +7,7 @@ import type { Entity } from '../../types';
 import { heroQuery } from '../../game/ecs';
 import { getDungeonLayout } from '../../game/dungeon/getDungeonLayout';
 import { useGameStore } from '../../game/store';
+import { useRunSeedStore } from '../../game/ui/runSeedStore';
 import { createWalkGrid } from '../../game/hero/navigation/walkGrid';
 import { HERO_GROUND_CLEARANCE } from '../../game/hero/constants';
 import { MONSTER_ARCHETYPES } from '../../game/monsters/archetypes';
@@ -40,7 +41,8 @@ export default function MonsterActor({ entity }: MonsterActorProps) {
   const statusRef = useRef<HTMLSpanElement>(null);
   const pathDebug = useGameStore((state) => state.pathDebug);
   const depth = useGameStore((state) => state.currentDepth);
-  const layout = getDungeonLayout(depth);
+  const runSeed = useRunSeedStore((state) => state.seed);
+  const layout = getDungeonLayout(depth, runSeed);
   const stats = MONSTER_ARCHETYPES[entity.archetype ?? 'slime'];
 
   const brain = useMemo(() => {

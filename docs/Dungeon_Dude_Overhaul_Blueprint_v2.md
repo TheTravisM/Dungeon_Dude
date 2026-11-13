@@ -142,7 +142,7 @@ Record the source, license, and author of every piece in `docs/ASSETS.md`.
 
 - [ ] All files exist, are logged in `docs/ASSETS.md`, and are within size targets.
 - [ ] A temporary dev route shows the base model and logs its clip names (must include Idle and Run). Remove the route afterward.
-- [ ] Build passes. Gameplay unchanged.
+- [x] Build passes. Gameplay unchanged.
 
 ---
 
@@ -185,11 +185,11 @@ Hooks and APIs: `EffectComposer`, `DepthOfField`, `Vignette`, `TiltShift2` (lowe
 
 ### 3.4 Acceptance gate
 
-- [ ] Camera layout matches Phase 0 numbers.
-- [ ] Screen edges are near black. The hero and nearby tiles stay sharp. Far areas blur.
-- [ ] Stone reads cold. The torch is the only warm color on screen.
-- [ ] No per-frame React renders in the effects component.
-- [ ] Forcing the low tier swaps effects once, without flicker.
+- [x] Camera layout matches Phase 0 numbers.
+- [x] Screen edges are near black. The hero and nearby tiles stay sharp. Far areas blur.
+- [x] Stone reads cold. The torch is the only warm color on screen.
+- [x] No per-frame React renders in the effects component.
+- [x] Forcing the low tier swaps effects once, without flicker.
 
 ---
 
@@ -261,12 +261,12 @@ Phase 0 reports whether it exists. If it does, port it to instancing:
 
 ### 4.9 Acceptance gate
 
-- [ ] Environment draw calls: floor 1, walls 1, both lower than baseline.
-- [ ] Walls show irregular, chipped edges. Floor tiles look slightly uneven.
-- [ ] Same seed gives the same dungeon after reload and HMR.
+- [x] Environment draw calls: floor 1, walls 1, both lower than baseline.
+- [x] Walls show irregular, chipped edges. Floor tiles look slightly uneven.
+- [x] Same seed gives the same dungeon after reload and HMR.
 - [ ] Hero walks the full map with no snagging and no passing through walls.
 - [ ] Descending levels: no warnings, no memory growth over 10 descents.
-- [ ] Vitest passes for `buildTileMatrices` (deterministic, correct counts, Y within +/-0.05) and `mergeWallColliders` (every wall cell covered exactly once).
+- [x] Vitest passes for `buildTileMatrices` (deterministic, correct counts, Y within +/-0.05) and `mergeWallColliders` (every wall cell covered exactly once).
 
 ---
 
@@ -329,13 +329,13 @@ src/game/hero/
 
 ### 5.7 Acceptance gate
 
-- [ ] Knight visible, feet on the floor, no floating or sinking.
-- [ ] Hood, back shield, left pauldron, sword in right hand, torch in left hand, all visible and attached to the right bones.
-- [ ] Idle at rest, Run when moving, smooth crossfades, under both autoplay and manual control.
-- [ ] Torch light matches the Phase 0 brightness and moves with the left hand.
+- [x] Knight visible, feet on the floor, no floating or sinking.
+- [x] Hood, back shield, left pauldron, sword in right hand, torch in left hand, all visible and attached to the right bones.
+- [x] Idle at rest, Run when moving, smooth crossfades, under both autoplay and manual control.
+- [x] Torch light matches the Phase 0 brightness and moves with the left hand.
 - [ ] Hero does not snag on tiles or pass through walls.
-- [ ] No re-renders of hero components during play. No new console warnings.
-- [ ] Monsters, combat, and the rest of the game work as before (G12).
+- [x] No re-renders of hero components during play. No new console warnings.
+- [x] Monsters, combat, and the rest of the game work as before (G12).
 
 ---
 
@@ -395,10 +395,10 @@ Test on a real phone with `vite --host` on the local network and remote debuggin
 
 ### 6.7 Acceptance gate
 
-- [ ] Shadow grep: zero hits.
+- [x] Shadow grep: zero hits.
 - [ ] Blob visible under the hero on every tile, no z-fighting.
-- [ ] dpr clamped at 1.5 on a high-density phone.
-- [ ] Physics on a fixed 1/60 step, no jitter at 60 or 120 Hz.
+- [x] dpr clamped at 1.5 on a high-density phone.
+- [x] Physics on a fixed 1/60 step, no jitter at 60 or 120 Hz.
 - [ ] `PERF_CHECKLIST.md` filled with measured numbers.
 
 ---

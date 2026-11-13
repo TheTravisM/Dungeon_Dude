@@ -52,6 +52,9 @@ export interface DungeonRoom {
 // everywhere else so the fixed isometric camera can see into corridors.
 export type WallHeight = 'tall' | 'low';
 
+// Render quality can only move from high to low during a session.
+export type QualityTier = 'high' | 'low';
+
 export interface DungeonWallCell extends GridCell {
   height: WallHeight;
 }

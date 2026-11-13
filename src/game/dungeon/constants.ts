@@ -19,28 +19,28 @@ export const DUNGEON_MARGIN = 1;
 export const DUNGEON_DEFAULT_SEED = 1337;
 
 /** Per-seed room target range. The minimum fallback still applies. */
-export const DUNGEON_ROOM_MIN = 4;
-export const DUNGEON_ROOM_MAX = 6;
+export const DUNGEON_ROOM_MIN = 16;
+export const DUNGEON_ROOM_MAX = 22;
 
 /** The start room is larger and centered on the spawn point. */
-export const DUNGEON_START_ROOM_MIN = 5;
-export const DUNGEON_START_ROOM_MAX = 7;
+export const DUNGEON_START_ROOM_MIN = 8;
+export const DUNGEON_START_ROOM_MAX = 11;
 
-/** Later rooms stay smaller so they fit around the start room. */
-export const DUNGEON_ROOM_MIN_SIZE = 3;
-export const DUNGEON_ROOM_MAX_SIZE = 5;
+/** Later rooms vary in size so halls and chambers do not read as a grid. */
+export const DUNGEON_ROOM_MIN_SIZE = 4;
+export const DUNGEON_ROOM_MAX_SIZE = 8;
 
-/** Keep one empty tile between rooms so their walls stay readable. */
-export const DUNGEON_ROOM_SPACING = 1;
+/** Keep two empty tiles between rooms so two-tile halls never hug a wall. */
+export const DUNGEON_ROOM_SPACING = 2;
 
 /** Upper bound for rejected random placements before the generator retries. */
-export const DUNGEON_ROOM_MAX_ATTEMPTS = 100;
+export const DUNGEON_ROOM_MAX_ATTEMPTS = 900;
 
 /**
- * Corridors are one tile wide. The Step 5 hero capsule and character-controller
- * offset must stay within one half tile so the hero can clear every corridor.
+ * Hallways are two tiles wide, which leaves room for the hero capsule, props,
+ * and monsters to pass without the camera feeling pinched.
  */
-export const DUNGEON_CORRIDOR_WIDTH = 1;
+export const DUNGEON_CORRIDOR_WIDTH = 2;
 
 /** Top of the carved floor tiles. Everything walkable sits at this height. */
 export const FLOOR_TOP = 0.06;
@@ -59,7 +59,7 @@ export const WALL_HEIGHT_LOW = 0.6;
 /** Height of the solid stone block the diorama sits on. */
 export const PLINTH_HEIGHT = 0.8;
 
-/** Lip beyond the 20 by 20 grid on each side. */
+/** Lip beyond the playable grid on each side. */
 export const PLINTH_OVERHANG = 0.4;
 
 export const PLINTH_SIZE = DUNGEON_SIZE + PLINTH_OVERHANG * 2;

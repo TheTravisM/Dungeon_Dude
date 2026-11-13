@@ -1,5 +1,10 @@
 import type { DungeonRoom, GridCell } from '../../types';
-import { DUNGEON_CORRIDOR_WIDTH, DUNGEON_MARGIN, DUNGEON_SIZE } from './constants';
+import {
+  DUNGEON_CORRIDOR_WIDTH,
+  DUNGEON_MARGIN,
+  DUNGEON_ROOM_SPACING,
+  DUNGEON_SIZE,
+} from './constants';
 import { CARDINAL_DIRECTIONS, findGridPath } from './pathfinding';
 import type { RandomSource } from './random';
 
@@ -24,22 +29,24 @@ function manhattan(a: GridCell, b: GridCell): number {
   return Math.abs(a.x - b.x) + Math.abs(a.z - b.z);
 }
 
-/** True when a cell is inside the room rectangle expanded by one tile. */
+/** True when a cell is inside the room rectangle expanded by the spacing. */
 function insideBuffer(room: DungeonRoom, x: number, z: number): boolean {
   return (
-    x >= room.x - 1 &&
-    x < room.x + room.width + 1 &&
-    z >= room.z - 1 &&
-    z < room.z + room.depth + 1
+    x >= room.x - DUNGEON_ROOM_SPACING &&
+    x < room.x + room.width + DUNGEON_ROOM_SPACING &&
+    z >= room.z - DUNGEON_ROOM_SPACING &&
+    z < room.z + room.depth + DUNGEON_ROOM_SPACING
   );
 }
 
 /**
- * Connects rooms with one-tile corridors using a deterministic spanning tree
- * and at most one optional loop. Routes use a bounded breadth-first search that
- * treats every other room and its one-tile buffer as blocked. This prevents a
- * corridor from cutting through an unrelated room or running alongside it and
- * creating an unintended doorway.
+ * Connects rooms with two-tile-wide corridors using a deterministic spanning
+ * tree and at most one optional loop. Routes use a bounded breadth-first search
+ * that treats every other room and its spacing buffer as blocked. This prevents
+ * a corridor from cutting through an unrelated room or running alongside it and
+ * creating an unintended doorway. Every path cell stamps a full corridor block,
+ * so the clear width never drops below `DUNGEON_CORRIDOR_WIDTH`, including at
+ * bends and room thresholds.
  */
 export function carveCorridors(
   rooms: readonly DungeonRoom[],
@@ -75,7 +82,9 @@ export function carveCorridors(
   }
 
   const min = DUNGEON_MARGIN;
-  const max = size - DUNGEON_MARGIN - 1;
+  // Keep the stamped corridor block inside the margin so it can never carve
+  // through the tall outer ring that closes the diorama silhouette.
+  const max = size - DUNGEON_MARGIN - DUNGEON_CORRIDOR_WIDTH;
   // A per-layout rotation keeps routes deterministic while varying which
   // shortest path the breadth-first search prefers.
   const rotation = rng.int(0, CARDINAL_DIRECTIONS.length - 1);
@@ -110,8 +119,12 @@ export function carveCorridors(
 
   const carvePath = (path: GridCell[]) => {
     for (const cell of path) {
-      for (let offset = 0; offset < DUNGEON_CORRIDOR_WIDTH; offset++) {
-        carve(cell.x, cell.z + offset, true);
+      // A square stamp keeps the route at least two tiles in both axes, so a
+      // bend can never pinch the hallway back down to a single tile.
+      for (let dz = 0; dz < DUNGEON_CORRIDOR_WIDTH; dz++) {
+        for (let dx = 0; dx < DUNGEON_CORRIDOR_WIDTH; dx++) {
+          carve(cell.x + dx, cell.z + dz, true);
+        }
       }
     }
   };

@@ -34,7 +34,7 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   float threshold = bayer4(pixel) / 16.0 - 0.5;
 
   // Adding a fixed offset to near-black pixels turns the empty dungeon into a
-  // visible checkerboard. Fading the pattern in by luminance keeps shadows
+  // visible checkerboard. Fading the pattern in by luminance keeps dark areas
   // clean while still texturing lit stone and props.
   float luma = dot(inputColor.rgb, vec3(0.2126, 0.7152, 0.0722));
   float amount = strength * smoothstep(0.015, 0.18, luma);

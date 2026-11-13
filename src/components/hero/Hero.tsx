@@ -11,6 +11,7 @@ import {
   HERO_RADIUS,
 } from '../../game/hero/constants';
 import { heroQuery } from '../../game/ecs';
+import { FLOOR_MAX_JITTER } from '../../config/dioramaConfig';
 import { resolveHeroDirection } from '../../game/hero/intent';
 import { useHeroEntity } from '../../hooks/hero/useHeroEntity';
 import { useHeroAnimation } from '../../hooks/hero/useHeroAnimation';
@@ -21,6 +22,7 @@ import { useHeroMovement } from '../../hooks/hero/useHeroMovement';
 import { useHeroRig } from '../../hooks/hero/useHeroRig';
 import type { DungeonLayout } from '../../types';
 import HeroModel from './HeroModel';
+import BlobShadow from '../environment/BlobShadow';
 import SwordSensor from './SwordSensor';
 
 interface HeroProps {
@@ -81,6 +83,7 @@ export default function Hero({ layout }: HeroProps) {
         position={[0, HERO_CAPSULE_CENTER_Y, 0]}
       />
       <HeroModel rig={rig} />
+      <BlobShadow size={0.95} position={[0, FLOOR_MAX_JITTER + 0.01, 0]} />
       <SwordSensor rig={rig} />
     </RigidBody>
   );

@@ -98,17 +98,22 @@ try {
     for (let index = 0; index < cells.length; index++) {
       const cell = cells[index];
       const offset = index * 16;
+      // Seeded scale and lean are tiny; the translation must still land on the
+      // cell and the base must still sit at plinth height.
+      const lengthX = Math.hypot(matrices[offset], matrices[offset + 1], matrices[offset + 2]);
+      const lengthY = Math.hypot(matrices[offset + 4], matrices[offset + 5], matrices[offset + 6]);
+      const lengthZ = Math.hypot(matrices[offset + 8], matrices[offset + 9], matrices[offset + 10]);
       if (
-        matrices[offset] !== 1 ||
-        matrices[offset + 5] !== 1 ||
-        matrices[offset + 10] !== 1
+        Math.abs(lengthX - 1) > 0.031 ||
+        Math.abs(lengthY - 1) > 0.031 ||
+        Math.abs(lengthZ - 1) > 0.031
       ) {
         fail(`seed ${seed}: ${label} wall instance ${index} has an unexpected scale`);
         break;
       }
       if (
         Math.abs(matrices[offset + 12] - gridToWorld(cell.x, layout.size)) > 1e-6 ||
-        Math.abs(matrices[offset + 13] - height / 2) > 1e-6 ||
+        Math.abs(matrices[offset + 13] - height / 2) > height * 0.016 ||
         Math.abs(matrices[offset + 14] - gridToWorld(cell.z, layout.size)) > 1e-6
       ) {
         fail(`seed ${seed}: ${label} wall instance ${index} is not on its grid cell`);
@@ -168,17 +173,21 @@ try {
     for (let index = 0; index < layout.floorCells.length; index++) {
       const cell = layout.floorCells[index];
       const offset = index * stride;
+      const lengthX = Math.hypot(matrices[offset], matrices[offset + 1], matrices[offset + 2]);
+      const lengthY = Math.hypot(matrices[offset + 4], matrices[offset + 5], matrices[offset + 6]);
+      const lengthZ = Math.hypot(matrices[offset + 8], matrices[offset + 9], matrices[offset + 10]);
       if (
-        Math.abs(matrices[offset] - expectedScale) > 1e-6 ||
-        Math.abs(matrices[offset + 5] - 1) > 1e-6 ||
-        Math.abs(matrices[offset + 10] - expectedScale) > 1e-6
+        Math.abs(lengthX - expectedScale) > 1e-4 ||
+        Math.abs(lengthY - 1) > 1e-4 ||
+        Math.abs(lengthZ - expectedScale) > 1e-4
       ) {
         fail(`seed ${seed}: floor instance ${index} has an unexpected scale`);
         break;
       }
+      // Seeded tilt and jitter are visual only; the collider stays flat.
       if (
         Math.abs(matrices[offset + 12] - (cell.x - halfExtent)) > 1e-6 ||
-        Math.abs(matrices[offset + 13] - expectedY) > 1e-6 ||
+        Math.abs(matrices[offset + 13] - expectedY) > 0.05 + 1e-6 ||
         Math.abs(matrices[offset + 14] - (cell.z - halfExtent)) > 1e-6
       ) {
         fail(`seed ${seed}: floor instance ${index} is not on its grid cell`);
@@ -193,10 +202,35 @@ try {
       }
     }
 
-    if (layout.rooms.length < 4 || layout.rooms.length > 6) {
-      fail(`seed ${seed}: room count ${layout.rooms.length} is outside 4 to 6`);
+    if (layout.rooms.length < 16 || layout.rooms.length > 22) {
+      fail(`seed ${seed}: room count ${layout.rooms.length} is outside 16 to 22`);
     }
     roomCounts.set(layout.rooms.length, (roomCounts.get(layout.rooms.length) || 0) + 1);
+
+    // Hallways must be at least two tiles wide. Outside the rooms, every carved
+    // cell therefore needs a walkable neighbour on both axes; a one-tile run
+    // would only have neighbours along its own direction.
+    const roomCells = new Set();
+    for (const room of layout.rooms) {
+      for (let z = room.z; z < room.z + room.depth; z++) {
+        for (let x = room.x; x < room.x + room.width; x++) {
+          roomCells.add(`${x},${z}`);
+        }
+      }
+    }
+    for (const cell of layout.floorCells) {
+      if (roomCells.has(`${cell.x},${cell.z}`)) continue;
+      const hasX =
+        floorSet.has(`${cell.x - 1},${cell.z}`) ||
+        floorSet.has(`${cell.x + 1},${cell.z}`);
+      const hasZ =
+        floorSet.has(`${cell.x},${cell.z - 1}`) ||
+        floorSet.has(`${cell.x},${cell.z + 1}`);
+      if (!hasX || !hasZ) {
+        fail(`seed ${seed}: corridor cell ${cell.x},${cell.z} is less than 2 tiles wide`);
+        break;
+      }
+    }
 
     const wallMap = new Map(
       layout.wallCells.map((cell) => [`${cell.x},${cell.z}`, cell.height])

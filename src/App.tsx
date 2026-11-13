@@ -5,6 +5,7 @@ import DebugOverlay from './components/debug/DebugOverlay';
 import DungeonStats from './components/debug/DungeonStats';
 import HeroDebugReadout from './components/debug/HeroDebugReadout';
 import PathDebug from './components/debug/PathDebug';
+import RendererInfoLogger from './components/debug/RendererInfoLogger';
 import Dungeon from './components/dungeon/Dungeon';
 import Effects from './components/Effects';
 import Hero from './components/hero/Hero';
@@ -20,6 +21,8 @@ import {
 } from './components/scene/cameraConstants';
 import IsometricCamera from './components/scene/IsometricCamera';
 import Lighting from './components/scene/Lighting';
+import QualityTier from './components/scene/QualityTier';
+import { CAMERA_FAR, CAMERA_NEAR } from './config/dioramaConfig';
 import MainMenu from './components/ui/MainMenu';
 import HUD from './components/ui/HUD';
 import GameOver from './components/ui/GameOver';
@@ -27,6 +30,7 @@ import ScreenAnnouncer from './components/ui/ScreenAnnouncer';
 import { getDungeonLayout } from './game/dungeon/getDungeonLayout';
 import { useGameStore } from './game/store';
 import { useScreenStore } from './game/ui/screenStore';
+import { useRunSeedStore } from './game/ui/runSeedStore';
 import styles from './App.module.scss';
 
 /**
@@ -50,7 +54,8 @@ export default function App() {
   // Depth is a rare UI-level change, so a store subscription is appropriate.
   // Per-frame data stays in the ECS world instead.
   const currentDepth = useGameStore((state) => state.currentDepth);
-  const layout = getDungeonLayout(currentDepth);
+  const runSeed = useRunSeedStore((state) => state.seed);
+  const layout = getDungeonLayout(currentDepth, runSeed);
   const screen = useScreenStore((state) => state.screen);
 
   // Diagnostics are a deliberate, infrequent UI action. Keeping the switch here
@@ -63,15 +68,21 @@ export default function App() {
         <div className={styles.canvasLayer}>
           <KeyboardControls map={KEYBOARD_CONTROLS}>
             <Canvas
-              shadows="percentage"
-              dpr={[1, 2]}
+              dpr={[1, 1.5]}
+              gl={{
+                antialias: false,
+                powerPreference: 'high-performance',
+                stencil: false,
+                alpha: false,
+              }}
               orthographic
-              camera={{ position: CAMERA_OFFSET, zoom: CAMERA_ZOOM, near: 0.1, far: 200 }}
+              camera={{ position: CAMERA_OFFSET, zoom: CAMERA_ZOOM, near: CAMERA_NEAR, far: CAMERA_FAR }}
             >
               <color attach="background" args={['#0b0e14']} />
               <IsometricCamera />
               <CameraFollow />
               <Lighting />
+              <QualityTier />
               <GamePhysics>
                 <Dungeon layout={layout} />
                 <Hero key={layout.seed} layout={layout} />
@@ -84,6 +95,7 @@ export default function App() {
               {import.meta.env.DEV && <PathDebug layout={layout} />}
               <DungeonStats visible={statsVisible} />
               {import.meta.env.DEV && <HeroDebugReadout />}
+              {import.meta.env.DEV && <RendererInfoLogger />}
             </Canvas>
           </KeyboardControls>
         </div>

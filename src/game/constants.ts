@@ -3,8 +3,11 @@
  * these values so the rendered floor and its collision shape cannot drift.
  */
 
-/** One unit equals one dungeon tile. The playable grid is 20 by 20 tiles. */
-export const FLOOR_SIZE = 20;
+/**
+ * One unit equals one dungeon tile. The playable grid is 48 by 48 tiles so a
+ * run has room for roughly twenty chambers instead of a handful.
+ */
+export const FLOOR_SIZE = 48;
 
 /** The visual floor is a slab; its top surface sits at world y = 0. */
 export const FLOOR_THICKNESS = 0.5;

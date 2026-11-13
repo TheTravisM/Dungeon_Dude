@@ -88,13 +88,14 @@ The game is configured to talk to a local XTTS v2 server for voice lines (Step 8
 
 ## How the Dungeon Is Forged
 
-Every floor is generated from a single seed, so any reported layout can be reproduced exactly:
+Every run is generated from a fresh random seed, and every floor in that run derives from it, so a reported layout can still be reproduced exactly:
 
-1. **Seed.** The depth determines the seed (depth 1 is `1337`, so the first floor is reproducible by name). A `VITE_DUNGEON_SEED` override wins over the depth seed.
-2. **Rooms.** Four to six rooms are placed on the 20×20 grid with a one-tile gap. The start room is 5×5 to 7×7, centered on the spawn point; the others are 3×3 to 5×5.
-3. **Corridors.** One-tile-wide corridors are carved between rooms with obstacle awareness, and a flood-fill check guarantees every room is reachable.
+1. **Seed.** A new 32-bit seed is rolled when the page loads and again whenever a run starts or restarts. Depth one uses the run seed; deeper floors hash the run seed with the depth. A `VITE_DUNGEON_SEED` override wins over both for debugging.
+2. **Rooms.** Sixteen to twenty-two rooms are placed on the 48×48 grid with a two-tile gap. The start room is 8×8 to 11×11, centered on the spawn point; the others are 4×4 to 8×8.
+3. **Corridors.** Two-tile-wide corridors are stamped between rooms with obstacle awareness, and a flood-fill check guarantees every room is reachable.
 4. **Walls.** Full-height walls (2.2 units) sit on the far edges of the diorama; low ledges (0.6) sit everywhere else so the fixed isometric camera can see into corridors. Adjacent wall tiles are merged into runs, so one collider replaces many.
-5. **Layout.** The result is a single `DungeonLayout` object — rooms, floor cells, wall cells, merged wall runs, and the spawn point — cached by seed so re-renders never regenerate the floor.
+5. **Dressing.** Seeded room themes add landmarks (shrines, treasuries, prisons, collapsed halls, gardens, barracks), wall sconces and banners, moss, puddles, cracks, rubble, barrels, crates, bones, and glowing mushrooms. Props are cosmetic only; collision still comes from the floor grid.
+6. **Layout.** The result is a single `DungeonLayout` object — rooms, floor cells, wall cells, merged wall runs, and the spawn point — cached by seed so re-renders never regenerate the floor.
 
 Renderers and physics colliders read the same shared constants and the same `gridToWorld` transform, so what you see and what you collide with cannot drift apart.
 

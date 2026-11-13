@@ -11,7 +11,7 @@ import { generateWalls } from './walls';
  * rendering and collision both consume it, so the generator can be tested
  * without a WebGL context.
  *
- * Strategy: place non-overlapping rooms, connect them with one-tile corridors
+ * Strategy: place non-overlapping rooms, connect them with two-tile corridors
  * using a deterministic spanning tree plus at most one loop, then derive walls
  * from exposed floor edges and merge them into precomputed cutaway runs. Every
  * carved floor cell is reachable from the start room.

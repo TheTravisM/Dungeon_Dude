@@ -1,8 +1,8 @@
 /**
  * Hero tuning constants shared by physics, movement, camera, and AI.
  *
- * Corridors are one tile wide, so the radius plus controller offset must stay
- * at or below 0.5 to leave clearance on both sides.
+ * Corridors are two tiles wide, so the radius plus controller offset has ample
+ * clearance on both sides while still letting the hero hug a wall.
  */
 export const HERO_RADIUS = 0.28;
 export const HERO_HEIGHT = 1.05;

@@ -1,13 +1,11 @@
 import { useEffect, useImperativeHandle, useMemo, useRef, type Ref } from 'react';
 import {
   BoxGeometry,
-  CircleGeometry,
   MeshStandardMaterial,
   type Color,
   type Group,
 } from 'three';
 import type { MonsterArchetypeId } from '../../types';
-import { MONSTER_ARCHETYPES } from '../../game/monsters/archetypes';
 import { MONSTER_PARTS } from '../../game/monsters/monsterParts';
 
 export interface MonsterRig {
@@ -24,19 +22,16 @@ interface MonsterProps {
 
 /** One unit cube shared by every monster part; never disposed. */
 const BOX = new BoxGeometry(1, 1, 1);
-/** Flat disc shared by every blob shadow; never disposed. */
-const BLOB = new CircleGeometry(1, 16);
 
 /**
  * Low-poly monster rendered from the frozen parts table. Faces local +Z so
  * `rotation.y = Math.atan2(dirX, dirZ)` matches the hero convention.
  *
  * Geometry is shared; materials are per instance so a future hit flash cannot
- * light up every monster of the same type. Monsters never cast real shadows.
+ * light up every monster of the same type. Monsters only use a blob decal.
  */
 export default function Monster({ archetype, rigRef }: MonsterProps) {
   const visualRef = useRef<Group>(null);
-  const stats = MONSTER_ARCHETYPES[archetype];
   const parts = MONSTER_PARTS[archetype];
 
   const materials = useMemo(() => {
@@ -96,28 +91,9 @@ export default function Monster({ archetype, rigRef }: MonsterProps) {
             material={materialFor(part)}
             position={[part.pos[0], part.pos[1], part.pos[2]]}
             scale={[part.size[0], part.size[1], part.size[2]]}
-            castShadow={false}
-            receiveShadow
           />
         ))}
       </group>
-      <mesh
-        geometry={BLOB}
-        position={[0, 0.012, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        scale={[stats.radius * 1.3, stats.radius * 1.3, 1]}
-        receiveShadow={false}
-      >
-        <meshBasicMaterial
-          color="#000000"
-          transparent
-          opacity={0.35}
-          depthWrite={false}
-          toneMapped={false}
-          polygonOffset
-          polygonOffsetFactor={-1}
-        />
-      </mesh>
     </group>
   );
 }

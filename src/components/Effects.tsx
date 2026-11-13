@@ -1,54 +1,86 @@
+import { useRef, type RefObject } from 'react';
+import { useFrame } from '@react-three/fiber';
 import {
+  DepthOfField,
   EffectComposer,
-  Noise,
-  SSAO,
-  TiltShift,
+  TiltShift2,
   Vignette,
 } from '@react-three/postprocessing';
-import { BlendFunction, KernelSize } from 'postprocessing';
-import { Dither } from './effects/Dither';
+import type { DepthOfFieldEffect } from 'postprocessing';
+import {
+  AUTOFOCUS_HEIGHT,
+  DEPTH_OF_FIELD,
+  TILT_SHIFT,
+  VIGNETTE,
+} from '../config/dioramaConfig';
+import { heroQuery } from '../game/ecs';
+import { useQualityStore } from '../game/quality/tierStore';
+
+interface AutofocusProps {
+  dof: RefObject<DepthOfFieldEffect | null>;
+}
 
 /**
- * Flip this off to compare the raw render against the stylized pipeline while
- * tuning values. It mirrors the camera debug flag so the whole scene can be
- * inspected without deleting code.
+ * Tracks the hero with the depth-of-field effect. The value is copied into the
+ * effect instance every frame, so no prop changes and no React renders occur
+ * during play. The target stays stable even while the hero moves between tiles.
  */
-const EFFECTS_ENABLED = true;
+function Autofocus({ dof }: AutofocusProps) {
+  useFrame(() => {
+    const position = heroQuery.first?.position;
+    const effect = dof.current;
+    if (!position || !effect?.target) return;
+    effect.target.set(position.x, position.y + AUTOFOCUS_HEIGHT, position.z);
+  });
+
+  return null;
+}
 
 /**
- * Ambient occlusion grounds geometry before the stylized blur, dither, grain,
- * and vignette passes. SSAO runs at half resolution with a bounded sample
- * count to control its cost on GPUs below the primary RTX 3090 target.
+ * Two stable pipelines. High tier is a strong miniature depth of field with a
+ * near-black vignette. Low tier swaps the depth pass for the cheaper
+ * tilt-shift blur but keeps the same edge fade. The tier store only ever moves
+ * downward, so this component re-renders at most once after startup.
  */
 export default function Effects() {
-  if (!EFFECTS_ENABLED) return null;
+  const tier = useQualityStore((state) => state.tier);
+  const dofRef = useRef<DepthOfFieldEffect>(null);
+
+  if (tier === 'low') {
+    return (
+      <EffectComposer multisampling={0}>
+        <TiltShift2
+          blur={TILT_SHIFT.blur}
+          taper={TILT_SHIFT.taper}
+          start={TILT_SHIFT.start}
+          end={TILT_SHIFT.end}
+          samples={TILT_SHIFT.samples}
+        />
+        <Vignette
+          eskil={false}
+          offset={VIGNETTE.offset}
+          darkness={VIGNETTE.darkness}
+        />
+      </EffectComposer>
+    );
+  }
 
   return (
-    <EffectComposer enableNormalPass multisampling={4}>
-      <SSAO
-        samples={16}
-        rings={3}
-        intensity={1.5}
-        radius={0.4}
-        bias={0.02}
-        resolutionScale={0.5}
-      />
-      <TiltShift
-        blendFunction={BlendFunction.NORMAL}
-        offset={0}
-        rotation={0}
-        focusArea={0.75}
-        feather={0.5}
-        kernelSize={KernelSize.MEDIUM}
-        resolutionScale={0.5}
-      />
-      <Dither strength={0.03} scale={2} />
-      <Noise blendFunction={BlendFunction.OVERLAY} opacity={0.06} premultiply />
-      <Vignette
-        blendFunction={BlendFunction.NORMAL}
-        offset={0.35}
-        darkness={0.5}
-      />
-    </EffectComposer>
+    <>
+      <EffectComposer multisampling={0}>
+        <DepthOfField
+          ref={dofRef}
+          bokehScale={DEPTH_OF_FIELD.bokehScale}
+          focusRange={DEPTH_OF_FIELD.focusRange}
+          resolutionScale={DEPTH_OF_FIELD.resolutionScale}
+        />
+        <Vignette
+          eskil={false}
+          offset={VIGNETTE.offset}
+          darkness={VIGNETTE.darkness}
+        />
+      </EffectComposer>
+      <Autofocus dof={dofRef} />
+    </>
   );
 }

@@ -22,7 +22,7 @@ import { createWalkGrid } from '../navigation/walkGrid';
  * `directionToWaypoint`. No React, Rapier, or route singleton is involved.
  *
  * Budget is one simulated minute per room, which is far more than a hero needs
- * on a 20 by 20 floor and still catches a goal that can never be reached.
+ * on the full 48 by 48 floor and still catches a goal that can never be reached.
  */
 
 const SEEDS = Array.from({ length: 50 }, (_, index) => index + 1);

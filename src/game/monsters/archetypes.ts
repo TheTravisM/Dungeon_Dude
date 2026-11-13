@@ -14,7 +14,7 @@ export interface MonsterArchetype {
   readonly attackRange: number;
   readonly attackWindupMs: number;
   readonly attackCooldownMs: number;
-  /** Capsule radius. Corridors are one tile wide, so keep <= 0.3. */
+  /** Capsule radius. Corridors are two tiles wide, so keep <= 0.4. */
   readonly radius: number;
   readonly height: number;
   readonly gold: number;

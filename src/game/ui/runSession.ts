@@ -1,4 +1,5 @@
 import { STARTING_DEPTH, useGameStore } from '../store';
+import { useRunSeedStore } from './runSeedStore';
 
 /**
  * Resets the run-level aggregates for a fresh game. Screen state lives in its
@@ -7,6 +8,7 @@ import { STARTING_DEPTH, useGameStore } from '../store';
  * renders stale depth or totals.
  */
 export function resetRunState(): void {
+  useRunSeedStore.getState().reroll();
   useGameStore.setState({
     currentDepth: STARTING_DEPTH,
     goldCollected: 0,
